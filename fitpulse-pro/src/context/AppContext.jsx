@@ -79,11 +79,9 @@ export function AppProvider({ children }) {
   }, []);
 
   const register = useCallback(
-    (name, username, password, planDays) => {
+    (name, username, password) => {
       const exists = users.find((u) => u.username === username);
       if (exists) return { success: false, error: "El nombre de usuario ya existe." };
-
-      const planLabel = `${planDays} días/semana`;
 
       const newUser = {
         id: Date.now(),
@@ -91,8 +89,8 @@ export function AppProvider({ children }) {
         password,
         name,
         avatar: getAvatarFromName(name),
-        plan: planLabel,
-        planDays,
+        plan: "Sin plan",
+        planDays: null,
         coach: "Alex Rossi",
         coachTitle: "Head Trainer",
         startDate: new Date().toISOString().split("T")[0],
@@ -329,9 +327,11 @@ export function AppProvider({ children }) {
   }, []);
 
   const updateUser = useCallback((userId, updates) => {
-    setUsers((prev) =>
-      prev.map((u) => (u.id === userId ? { ...u, ...updates } : u))
-    );
+    setUsers((prev) => {
+      const updated = prev.map((u) => (u.id === userId ? { ...u, ...updates } : u));
+      syncCurrentUser(updated, userId);
+      return updated;
+    });
   }, []);
 
   // Admin can toggle monthly payment for a user

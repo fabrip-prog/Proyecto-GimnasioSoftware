@@ -31,7 +31,6 @@ export default function LoginPage() {
   const [regName, setRegName] = useState("");
   const [regUsername, setRegUsername] = useState("");
   const [regPassword, setRegPassword] = useState("");
-  const [regPlanDays, setRegPlanDays] = useState(availablePlanDays[0] || 2);
   const [showRegPassword, setShowRegPassword] = useState(false);
 
   function handleLogin(e) {
@@ -60,7 +59,7 @@ export default function LoginPage() {
     }
     setLoading(true);
     setTimeout(() => {
-      const result = register(regName.trim(), regUsername.trim(), regPassword, regPlanDays);
+      const result = register(regName.trim(), regUsername.trim(), regPassword);
       if (result.success) {
         setUsername(result.user.username);
         setPassword(regPassword);
@@ -297,28 +296,7 @@ export default function LoginPage() {
                 </div>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">
-                  Plan de entrenamiento
-                </label>
-                <div className="grid grid-cols-3 gap-2">
-                  {availablePlanDays.sort((a, b) => a - b).map((d) => (
-                    <button
-                      key={d}
-                      type="button"
-                      onClick={() => setRegPlanDays(d)}
-                      className={`py-3 px-2 rounded-xl border text-center transition-all ${
-                        regPlanDays === d
-                          ? "bg-emerald-500/15 border-emerald-500/40 text-emerald-400"
-                          : "bg-slate-800/50 border-slate-700/30 text-slate-400 hover:border-slate-600/50"
-                      }`}
-                    >
-                      <span className="text-lg font-bold block">{d}</span>
-                      <span className="text-xs">días/sem</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
+
 
               {error && (
                 <div className="flex items-center gap-2 px-4 py-3 bg-red-500/10 border border-red-500/30 rounded-xl text-red-400 text-sm">

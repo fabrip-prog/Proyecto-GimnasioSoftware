@@ -16,7 +16,7 @@ import RoutineDetail from "./RoutineDetail";
 import PaymentSection from "./PaymentSection";
 
 export default function Dashboard() {
-  const { currentUser: user, logout, plans, isMonthlyPaid } = useApp();
+  const { currentUser: user, logout, plans, isMonthlyPaid, updateUser, availablePlanDays } = useApp();
   const monthlyPaid = isMonthlyPaid(user.id);
   const proActive = user.proActive;
   const hasCustomPlan =
@@ -31,6 +31,7 @@ export default function Dashboard() {
 
   const [selectedDay, setSelectedDay] = useState(null);
   const [completedExercises, setCompletedExercises] = useState(new Set());
+  const [isEditingPlan, setIsEditingPlan] = useState(false);
 
   // If user has no valid plan
   const hasPlan = activePlan && Object.keys(activePlan).length > 0;
@@ -225,65 +226,106 @@ export default function Dashboard() {
 
                 {/* Day selector */}
                 <div>
-                  <h3 className="text-sm font-medium text-slate-400 mb-3 flex items-center gap-1.5">
-                    <CalendarDays className="w-4 h-4" />
-                    Resumen Semanal
-                  </h3>
-                  <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
-                    {dayKeys.map((dayNum) => {
-                      const isActive = dayNum === currentDay;
-                      const dayExercises =
-                        activePlan[dayNum]?.exercises || [];
-                      const dayCompleted = dayExercises.filter((ex) =>
-                        completedExercises.has(ex.id)
-                      ).length;
-                      const isDayDone =
-                        dayCompleted === dayExercises.length &&
-                        dayExercises.length > 0;
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-sm font-medium text-slate-400 flex items-center gap-1.5">
+                      <CalendarDays className="w-4 h-4" />
+                      Resumen Semanal
+                    </h3>
+                    {!isCustom && (
+                      <button 
+                        onClick={() => setIsEditingPlan(!isEditingPlan)}
+                        className="text-xs font-medium px-2 py-1 bg-emerald-500/10 text-emerald-400 rounded hover:bg-emerald-500/20 transition-colors cursor-pointer"
+                      >
+                        {isEditingPlan ? "Cancelar" : "Cambiar plan"}
+                      </button>
+                    )}
+                  </div>
+                  
+                  {isEditingPlan ? (
+                    <div className="bg-slate-800/40 border border-slate-700/30 rounded-xl p-6 text-center space-y-4 mb-4">
+                      <div>
+                        <h3 className="text-sm font-semibold text-white mb-1">Elegí tu nuevo plan</h3>
+                        <p className="text-slate-400 text-xs max-w-sm mx-auto">
+                          Seleccioná cuántos días querés entrenar a la semana.
+                        </p>
+                      </div>
+                      <div className="grid grid-cols-3 gap-3 max-w-sm mx-auto">
+                        {availablePlanDays.sort((a, b) => a - b).map((d) => (
+                          <button
+                            key={d}
+                            onClick={() => {
+                              updateUser(user.id, { 
+                                planDays: d, 
+                                plan: `${d} días/semana` 
+                              });
+                              setIsEditingPlan(false);
+                              setSelectedDay(null);
+                            }}
+                            className={`py-3 px-2 rounded-xl border transition-all text-center group cursor-pointer ${user.planDays === d ? 'bg-emerald-500/15 border-emerald-500/40' : 'bg-slate-800/80 border-slate-700/50 hover:border-emerald-500/50 hover:bg-emerald-500/10'}`}
+                          >
+                            <span className={`text-xl font-bold block ${user.planDays === d ? 'text-emerald-400' : 'text-slate-300 group-hover:text-emerald-400'}`}>{d}</span>
+                            <span className={`text-[10px] ${user.planDays === d ? 'text-emerald-500/70' : 'text-slate-500 group-hover:text-emerald-500/70'}`}>días/sem</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+                      {dayKeys.map((dayNum) => {
+                        const isActive = dayNum === currentDay;
+                        const dayExercises =
+                          activePlan[dayNum]?.exercises || [];
+                        const dayCompleted = dayExercises.filter((ex) =>
+                          completedExercises.has(ex.id)
+                        ).length;
+                        const isDayDone =
+                          dayCompleted === dayExercises.length &&
+                          dayExercises.length > 0;
 
-                      return (
-                        <button
-                          key={dayNum}
-                          onClick={() => setSelectedDay(dayNum)}
-                          className={`relative flex flex-col items-center gap-1 px-4 py-3 rounded-xl border transition-all duration-200 shrink-0 min-w-[90px] ${
-                            isActive
-                              ? "bg-emerald-500/15 border-emerald-500/40 text-emerald-400"
-                              : isDayDone
-                              ? "bg-emerald-500/5 border-emerald-500/20 text-emerald-500/70"
-                              : "bg-slate-800/40 border-slate-700/30 text-slate-400 hover:border-slate-600/50 hover:text-slate-300"
-                          }`}
-                        >
-                          <span className="text-xs font-medium uppercase tracking-wider">
-                            Día {dayNum}
-                          </span>
-                          <span
-                            className={`text-[10px] truncate max-w-[80px] ${
+                        return (
+                          <button
+                            key={dayNum}
+                            onClick={() => setSelectedDay(dayNum)}
+                            className={`relative flex flex-col items-center gap-1 px-4 py-3 rounded-xl border transition-all duration-200 shrink-0 min-w-[90px] cursor-pointer ${
                               isActive
-                                ? "text-emerald-400/70"
-                                : "text-slate-500"
+                                ? "bg-emerald-500/15 border-emerald-500/40 text-emerald-400"
+                                : isDayDone
+                                ? "bg-emerald-500/5 border-emerald-500/20 text-emerald-500/70"
+                                : "bg-slate-800/40 border-slate-700/30 text-slate-400 hover:border-slate-600/50 hover:text-slate-300"
                             }`}
                           >
-                            {activePlan[dayNum]?.title}
-                          </span>
-                          {isDayDone && (
-                            <Sparkles className="absolute -top-1 -right-1 w-4 h-4 text-yellow-400" />
-                          )}
-                          <div className="flex gap-0.5 mt-1">
-                            {dayExercises.map((ex) => (
-                              <div
-                                key={ex.id}
-                                className={`w-1.5 h-1.5 rounded-full transition-colors ${
-                                  completedExercises.has(ex.id)
-                                    ? "bg-emerald-400"
-                                    : "bg-slate-600"
-                                }`}
-                              />
-                            ))}
-                          </div>
-                        </button>
-                      );
-                    })}
-                  </div>
+                            <span className="text-xs font-medium uppercase tracking-wider">
+                              Día {dayNum}
+                            </span>
+                            <span
+                              className={`text-[10px] truncate max-w-[80px] ${
+                                isActive
+                                  ? "text-emerald-400/70"
+                                  : "text-slate-500"
+                              }`}
+                            >
+                              {activePlan[dayNum]?.title}
+                            </span>
+                            {isDayDone && (
+                              <Sparkles className="absolute -top-1 -right-1 w-4 h-4 text-yellow-400" />
+                            )}
+                            <div className="flex gap-0.5 mt-1">
+                              {dayExercises.map((ex) => (
+                                <div
+                                  key={ex.id}
+                                  className={`w-1.5 h-1.5 rounded-full transition-colors ${
+                                    completedExercises.has(ex.id)
+                                      ? "bg-emerald-400"
+                                      : "bg-slate-600"
+                                  }`}
+                                />
+                              ))}
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
 
                 {/* Session progress bar */}
@@ -318,13 +360,36 @@ export default function Dashboard() {
                 )}
               </>
             ) : (
-              <div className="text-center py-12 space-y-3">
-                <Dumbbell className="w-10 h-10 text-slate-600 mx-auto" />
-                <p className="text-slate-400 text-sm">
-                  {!proActive
-                    ? "Activá la suscripción Pro para acceder a tu plan personalizado del coach."
-                    : "Tu plan aún no ha sido configurado. Tu coach lo preparará pronto."}
-                </p>
+              <div className="bg-slate-800/40 border border-slate-700/30 rounded-xl p-6 text-center space-y-6 mt-4">
+                <Dumbbell className="w-12 h-12 text-slate-500 mx-auto" />
+                <div>
+                  <h3 className="text-lg font-semibold text-white mb-2">Elegí tu plan de entrenamiento</h3>
+                  <p className="text-slate-400 text-sm max-w-md mx-auto">
+                    Seleccioná cuántos días a la semana querés entrenar para que te asignemos una rutina.
+                  </p>
+                </div>
+                <div className="grid grid-cols-3 gap-3 max-w-sm mx-auto">
+                  {availablePlanDays.sort((a, b) => a - b).map((d) => (
+                    <button
+                      key={d}
+                      onClick={() => {
+                        updateUser(user.id, { 
+                          planDays: d, 
+                          plan: `${d} días/semana` 
+                        });
+                      }}
+                      className="py-4 px-2 rounded-xl bg-slate-800/80 border border-slate-700/50 hover:border-emerald-500/50 hover:bg-emerald-500/10 transition-all text-center group cursor-pointer"
+                    >
+                      <span className="text-2xl font-bold text-slate-300 group-hover:text-emerald-400 block">{d}</span>
+                      <span className="text-xs text-slate-500 group-hover:text-emerald-500/70">días/sem</span>
+                    </button>
+                  ))}
+                </div>
+                {proActive && (
+                  <p className="text-xs text-violet-400 mt-4">
+                    Tu coach preparará tu plan personalizado pronto. Mientras tanto, podés usar un plan base.
+                  </p>
+                )}
               </div>
             )}
           </>
