@@ -15,8 +15,51 @@ import { useApp } from "../context/AppContext";
 import RoutineDetail from "./RoutineDetail";
 import PaymentSection from "./PaymentSection";
 
+
+function ProfileModal({ user, onClose, updateUser }) {
+  const [name, setName] = useState(user.name);
+  const [password, setPassword] = useState(user.password);
+  const [goal, setGoal] = useState(user.goal || "Mantenerse en forma");
+
+  const handleSave = () => {
+    updateUser(user.id, { name, password, goal });
+    onClose();
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+      <div className="w-full max-w-md bg-slate-900 border border-slate-700/50 rounded-2xl shadow-2xl p-6 relative">
+        <h2 className="text-xl font-bold text-white mb-4">Mi Perfil</h2>
+        <div className="space-y-4">
+          <div>
+            <label className="block text-xs text-slate-400 mb-1">Nombre Completo</label>
+            <input type="text" value={name} onChange={e => setName(e.target.value)} className="w-full px-3 py-2 bg-slate-800 border border-slate-600/50 rounded-lg text-white text-sm" />
+          </div>
+          <div>
+            <label className="block text-xs text-slate-400 mb-1">Contraseña</label>
+            <input type="text" value={password} onChange={e => setPassword(e.target.value)} className="w-full px-3 py-2 bg-slate-800 border border-slate-600/50 rounded-lg text-white text-sm" />
+          </div>
+          <div>
+            <label className="block text-xs text-slate-400 mb-1">Objetivo Principal</label>
+            <select value={goal} onChange={e => setGoal(e.target.value)} className="w-full px-3 py-2 bg-slate-800 border border-slate-600/50 rounded-lg text-white text-sm">
+              <option value="Hipertrofia">Hipertrofia</option>
+              <option value="Pérdida de peso">Pérdida de peso</option>
+              <option value="Fuerza">Fuerza</option>
+              <option value="Mantenerse en forma">Mantenerse en forma</option>
+            </select>
+          </div>
+        </div>
+        <div className="mt-6 flex gap-3 justify-end">
+          <button onClick={onClose} className="px-4 py-2 text-sm text-slate-300 hover:text-white bg-slate-800 rounded-lg">Cancelar</button>
+          <button onClick={handleSave} className="px-4 py-2 text-sm text-white bg-emerald-500 hover:bg-emerald-600 rounded-lg">Guardar</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function Dashboard() {
-  const { currentUser: user, logout, plans, isMonthlyPaid, updateUser, availablePlanDays } = useApp();
+  const { currentUser: user, logout, plans, isMonthlyPaid, updateUser, availablePlanDays, logExerciseProgress } = useApp();
   const monthlyPaid = isMonthlyPaid(user.id);
   const proActive = user.proActive;
   const hasCustomPlan =
@@ -32,6 +75,7 @@ export default function Dashboard() {
   const [selectedDay, setSelectedDay] = useState(null);
   const [completedExercises, setCompletedExercises] = useState(new Set());
   const [isEditingPlan, setIsEditingPlan] = useState(false);
+  const [showProfile, setShowProfile] = useState(false);
 
   // If user has no valid plan
   const hasPlan = activePlan && Object.keys(activePlan).length > 0;
@@ -43,6 +87,11 @@ export default function Dashboard() {
 
   const currentDay = selectedDay ?? dayKeys[0];
   const dayData = hasPlan ? activePlan[currentDay] : null;
+
+  const handleSaveProgress = useCallback((exerciseId, weight, reps) => {
+    logExerciseProgress(user.id, currentDay.toString(), exerciseId, weight, reps);
+    setCompletedExercises((prev) => new Set([...prev, exerciseId]));
+  }, [user.id, currentDay, logExerciseProgress]);
 
   const toggleExercise = useCallback((exerciseId) => {
     setCompletedExercises((prev) => {
@@ -118,7 +167,7 @@ export default function Dashboard() {
             <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500/10 border border-emerald-500/20 rounded-lg">
               <Dumbbell className="w-4 h-4 text-emerald-400" />
               <span className="text-xs font-medium text-emerald-400">
-                FitPulse Pro
+                KineFix
               </span>
             </div>
             <button
@@ -407,9 +456,10 @@ export default function Dashboard() {
         )}
       </main>
 
+      {showProfile && <ProfileModal user={user} onClose={() => setShowProfile(false)} updateUser={updateUser} />}
       <footer className="max-w-4xl mx-auto px-4 py-8 text-center">
         <p className="text-xs text-slate-600">
-          © 2026 FitPulse Pro · Entrenamiento Inteligente
+          © 2026 KineFix · Entrenamiento Inteligente
         </p>
       </footer>
     </div>

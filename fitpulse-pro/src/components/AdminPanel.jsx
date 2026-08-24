@@ -105,6 +105,12 @@ function ExerciseForm({ form, setForm, onSubmit, onCancel, accentColor = "cyan" 
         rows={2}
         className={`w-full px-2.5 py-1.5 bg-slate-800 border border-slate-600/50 rounded-lg text-white text-sm focus:outline-none focus:ring-1 ${colors.ring} resize-none`}
       />
+      <input
+        value={form.mediaUrl || ""}
+        onChange={(e) => setForm({ ...form, mediaUrl: e.target.value })}
+        placeholder="URL de Foto/Video/GIF"
+        className={`w-full px-2.5 py-1.5 bg-slate-800 border border-slate-600/50 rounded-lg text-white text-sm focus:outline-none focus:ring-1 ${colors.ring}`}
+      />
       <div className="flex gap-2 justify-end">
         <button onClick={onCancel} className="px-3 py-1.5 text-slate-400 hover:text-white text-xs rounded-lg transition-colors">
           Cancelar
@@ -141,6 +147,8 @@ function EditExerciseForm({ form, setForm, onSave, onCancel }) {
       </div>
       <textarea value={form.instructions} onChange={(e) => setForm({ ...form, instructions: e.target.value })} placeholder="Instrucciones" rows={2}
         className="w-full px-2.5 py-1.5 bg-slate-800 border border-slate-600/50 rounded-lg text-white text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500/40 resize-none" />
+      <input value={form.mediaUrl || ""} onChange={(e) => setForm({ ...form, mediaUrl: e.target.value })} placeholder="URL de Foto/Video/GIF"
+        className="w-full px-2.5 py-1.5 bg-slate-800 border border-slate-600/50 rounded-lg text-white text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500/40" />
       <div className="flex gap-2 justify-end">
         <button onClick={onCancel} className="px-3 py-1.5 text-slate-400 hover:text-white text-xs rounded-lg transition-colors">Cancelar</button>
         <button onClick={onSave} className="flex items-center gap-1 px-3 py-1.5 bg-emerald-500 text-white text-xs font-medium rounded-lg hover:bg-emerald-600 transition-colors">
@@ -151,11 +159,56 @@ function EditExerciseForm({ form, setForm, onSave, onCancel }) {
   );
 }
 
-const emptyExForm = { name: "", muscle: "", sets: 3, reps: "10", rest: "60s", instructions: "" };
+const emptyExForm = { name: "", muscle: "", sets: 3, reps: "10", rest: "60s", instructions: "", mediaUrl: "" };
+
+
+// ── User Progress View ───────────────────────────────────────────────────────
+
+function UserProgressView({ user, onBack }) {
+  const progress = user.progress || {};
+  const dates = Object.keys(progress).sort((a, b) => b.localeCompare(a));
+  
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <button onClick={onBack} className="p-2 text-slate-400 hover:text-white bg-slate-800/50 hover:bg-slate-700/50 rounded-lg transition-all">
+            <ArrowLeft className="w-5 h-5" />
+          </button>
+          <div>
+            <h2 className="text-xl font-bold text-white flex items-center gap-2">
+              Progreso de {user.name}
+            </h2>
+          </div>
+        </div>
+      </div>
+      
+      {dates.length === 0 ? (
+        <div className="text-center py-10 text-slate-500 text-sm">Este usuario aún no ha registrado progresos.</div>
+      ) : (
+        <div className="space-y-4">
+          {dates.map(date => (
+            <div key={date} className="p-4 bg-slate-800/40 border border-slate-700/30 rounded-xl">
+              <h4 className="text-emerald-400 font-semibold mb-2">Día / Fecha: {date}</h4>
+              <div className="space-y-2">
+                {Object.entries(progress[date]).map(([exId, data]) => (
+                  <div key={exId} className="flex justify-between items-center text-sm p-2 bg-slate-900/50 rounded">
+                    <span className="text-slate-300 font-mono text-xs">ID Ejercicio: {exId}</span>
+                    <span className="text-cyan-400 font-medium">{data.weight} kg x {data.reps} reps</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 // ── Users Tab ────────────────────────────────────────────────────────────────
 
-function UsersTab({ onSelectUser }) {
+function UsersTab({ onSelectUser, onSelectProgress }) {
   const { users, deleteUser, adminToggleMonthly, adminTogglePro, getCurrentMonth } = useApp();
   const [search, setSearch] = useState("");
   const currentMonth = getCurrentMonth();
@@ -215,6 +268,13 @@ function UsersTab({ onSelectUser }) {
                       title="Gestionar plan personalizado"
                     >
                       <UserCog className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => onSelectProgress(user)}
+                      className="p-2 text-slate-500 hover:text-cyan-400 hover:bg-cyan-500/10 rounded-lg transition-all"
+                      title="Ver progreso del usuario"
+                    >
+                      <ClipboardList className="w-4 h-4" />
                     </button>
                     <button
                       onClick={() => { if (confirm(`¿Eliminar al usuario "${user.name}"?`)) deleteUser(user.id); }}
@@ -335,6 +395,7 @@ function CustomPlanEditor({ user, onBack }) {
       reps: newExForm.reps || "10",
       rest: newExForm.rest || "60s",
       instructions: newExForm.instructions.trim() || "Sin instrucciones específicas.",
+      mediaUrl: newExForm.mediaUrl ? newExForm.mediaUrl.trim() : "",
     });
     setAddingExerciseTo(null);
     setNewExForm({ ...emptyExForm });
@@ -558,6 +619,7 @@ function PlansTab() {
       name: newExForm.name.trim(), muscle: newExForm.muscle.trim() || "General",
       sets: Number(newExForm.sets) || 3, reps: newExForm.reps || "10",
       rest: newExForm.rest || "60s", instructions: newExForm.instructions.trim() || "Sin instrucciones específicas.",
+      mediaUrl: newExForm.mediaUrl ? newExForm.mediaUrl.trim() : "",
     });
     setAddingExerciseTo(null);
     setNewExForm({ ...emptyExForm });
@@ -717,6 +779,7 @@ export default function AdminPanel() {
   const { logout } = useApp();
   const [activeTab, setActiveTab] = useState("users");
   const [selectedUser, setSelectedUser] = useState(null);
+  const [selectedProgressUser, setSelectedProgressUser] = useState(null);
 
   return (
     <div className="min-h-screen bg-[#0a0f1a]">
@@ -726,9 +789,9 @@ export default function AdminPanel() {
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center shadow-lg shadow-amber-500/20">
               <Shield className="w-5 h-5 text-white" />
             </div>
-            <div>
-              <h1 className="text-white font-semibold text-sm leading-tight">Panel de Administración</h1>
-              <p className="text-slate-400 text-xs">FitPulse Pro · Gestión</p>
+            <div className="ml-3 hidden sm:block">
+              <h1 className="text-white font-bold text-lg leading-none">Admin Panel</h1>
+              <p className="text-slate-400 text-xs">KineFix · Gestión</p>
             </div>
           </div>
           <button onClick={logout}
@@ -739,7 +802,7 @@ export default function AdminPanel() {
       </header>
 
       <main className="max-w-5xl mx-auto px-4 py-6 space-y-6">
-        {!selectedUser && (
+        {!selectedUser && !selectedProgressUser && (
           <div className="flex gap-2">
             <TabButton active={activeTab === "users"} icon={Users} label="Usuarios" onClick={() => setActiveTab("users")} />
             <TabButton active={activeTab === "plans"} icon={ClipboardList} label="Planes Compartidos" onClick={() => setActiveTab("plans")} />
@@ -749,8 +812,10 @@ export default function AdminPanel() {
         <div className="bg-slate-900/50 border border-slate-700/30 rounded-2xl p-5">
           {selectedUser ? (
             <CustomPlanEditor user={selectedUser} onBack={() => setSelectedUser(null)} />
+          ) : selectedProgressUser ? (
+            <UserProgressView user={selectedProgressUser} onBack={() => setSelectedProgressUser(null)} />
           ) : activeTab === "users" ? (
-            <UsersTab onSelectUser={setSelectedUser} />
+            <UsersTab onSelectUser={setSelectedUser} onSelectProgress={setSelectedProgressUser} />
           ) : (
             <PlansTab />
           )}
@@ -758,7 +823,7 @@ export default function AdminPanel() {
       </main>
 
       <footer className="max-w-5xl mx-auto px-4 py-8 text-center">
-        <p className="text-xs text-slate-600">© 2026 FitPulse Pro · Panel Admin</p>
+        <p className="text-xs text-slate-600">© 2026 KineFix · Panel Admin</p>
       </footer>
     </div>
   );

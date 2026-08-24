@@ -1,8 +1,10 @@
 import { CheckCircle2, Circle, ChevronDown, ChevronUp, Info, Flame, Target, Timer } from "lucide-react";
 import { useState } from "react";
 
-export default function ExerciseCard({ exercise, completed, onToggle, index }) {
+export default function ExerciseCard({ exercise, completed, onToggle, index, onSaveProgress, defaultWeight="", defaultReps="" }) {
   const [expanded, setExpanded] = useState(false);
+  const [weight, setWeight] = useState(defaultWeight);
+  const [reps, setReps] = useState(defaultReps);
 
   return (
     <div
@@ -65,8 +67,12 @@ export default function ExerciseCard({ exercise, completed, onToggle, index }) {
           </div>
 
           {/* Visual demo placeholder */}
-          <div className="hidden sm:flex shrink-0 w-16 h-16 rounded-xl bg-gradient-to-br from-slate-700/60 to-slate-800/60 border border-slate-600/30 items-center justify-center">
-            <Flame className="w-7 h-7 text-emerald-500/40" />
+          <div className="hidden sm:flex shrink-0 w-16 h-16 rounded-xl bg-gradient-to-br from-slate-700/60 to-slate-800/60 border border-slate-600/30 items-center justify-center overflow-hidden">
+            {exercise.mediaUrl ? (
+              <img src={exercise.mediaUrl} alt={exercise.name} className="w-full h-full object-cover" />
+            ) : (
+              <Flame className="w-7 h-7 text-emerald-500/40" />
+            )}
           </div>
         </div>
 
@@ -91,12 +97,27 @@ export default function ExerciseCard({ exercise, completed, onToggle, index }) {
           expanded ? "max-h-60 opacity-100" : "max-h-0 opacity-0"
         }`}
       >
-        <div className="px-5 pb-5 pt-1">
+        <div className="px-5 pb-5 pt-1 space-y-3">
           <div className="p-4 bg-slate-900/60 rounded-xl border border-slate-700/30">
             <p className="text-sm text-slate-300 leading-relaxed">
               {exercise.instructions}
             </p>
           </div>
+          {onSaveProgress && (
+            <div className="p-4 bg-slate-900/60 rounded-xl border border-slate-700/30 flex flex-wrap gap-3 items-end">
+              <div className="flex-1 min-w-[120px]">
+                <label className="block text-xs text-slate-400 mb-1">Peso (kg)</label>
+                <input type="number" value={weight} onChange={e => setWeight(e.target.value)} placeholder="Ej: 50" className="w-full px-3 py-2 bg-slate-800 border border-slate-600/50 rounded-lg text-white text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500/40" />
+              </div>
+              <div className="flex-1 min-w-[120px]">
+                <label className="block text-xs text-slate-400 mb-1">Reps logradas</label>
+                <input type="number" value={reps} onChange={e => setReps(e.target.value)} placeholder="Ej: 10" className="w-full px-3 py-2 bg-slate-800 border border-slate-600/50 rounded-lg text-white text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500/40" />
+              </div>
+              <button onClick={() => onSaveProgress(weight, reps)} className="w-full sm:w-auto px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-medium rounded-lg transition-colors">
+                Guardar
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </div>

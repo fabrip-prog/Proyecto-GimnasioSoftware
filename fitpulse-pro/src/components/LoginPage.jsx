@@ -117,8 +117,8 @@ export default function LoginPage() {
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-emerald-500 to-cyan-500 mb-4 shadow-lg shadow-emerald-500/25">
             <Dumbbell className="w-8 h-8 text-white" />
           </div>
-          <h1 className="text-3xl font-bold text-white tracking-tight">
-            FitPulse <span className="text-emerald-400">Pro</span>
+          <h1 className="text-3xl font-bold text-white mb-2 tracking-tight">
+            KineFix
           </h1>
           <p className="text-slate-400 mt-1 text-sm">
             Tu plataforma de entrenamiento inteligente
@@ -332,7 +332,7 @@ export default function LoginPage() {
         )}
 
         <p className="text-center text-slate-600 text-xs mt-6">
-          © 2026 FitPulse Pro. Todos los derechos reservados.
+          © 2026 KineFix. Todos los derechos reservados.
         </p>
       </div>
     </div>

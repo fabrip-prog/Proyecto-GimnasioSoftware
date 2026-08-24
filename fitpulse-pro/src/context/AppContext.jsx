@@ -34,6 +34,7 @@ const USERS_WITH_PAYMENTS = INITIAL_USERS.map((u) => ({
   proPaidDate: null,
   customPlan: null,
   paymentHistory: [],
+  progress: {},
 }));
 
 export function AppProvider({ children }) {
@@ -100,6 +101,7 @@ export function AppProvider({ children }) {
         proPaidDate: null,
         customPlan: null,
         paymentHistory: [],
+        progress: {},
       };
       setUsers((prev) => [...prev, newUser]);
       return { success: true, user: newUser };
@@ -490,6 +492,27 @@ export function AppProvider({ children }) {
     adminTogglePro,
     getCurrentMonth,
     availablePlanDays: Object.keys(plans).map(Number),
+    logExerciseProgress: useCallback((userId, dateStr, exerciseId, weight, reps) => {
+      setUsers((prev) => {
+        const updated = prev.map((u) => {
+          if (u.id !== userId) return u;
+          const currentProgress = u.progress || {};
+          const dayProgress = currentProgress[dateStr] || {};
+          return {
+            ...u,
+            progress: {
+              ...currentProgress,
+              [dateStr]: {
+                ...dayProgress,
+                [exerciseId]: { weight, reps }
+              }
+            }
+          };
+        });
+        syncCurrentUser(updated, userId);
+        return updated;
+      });
+    }, []),
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

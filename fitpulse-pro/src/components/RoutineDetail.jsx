@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import ExerciseCard from "./ExerciseCard";
 import { ListChecks, Trophy } from "lucide-react";
 
-export default function RoutineDetail({ dayData, completedExercises, onToggleExercise }) {
+export default function RoutineDetail({ dayData, completedExercises, onToggleExercise, onSaveProgress, dayProgress = {} }) {
   const totalExercises = dayData.exercises.length;
   const completedCount = useMemo(
     () => dayData.exercises.filter((ex) => completedExercises.has(ex.id)).length,
@@ -52,6 +52,9 @@ export default function RoutineDetail({ dayData, completedExercises, onToggleExe
             index={i}
             completed={completedExercises.has(exercise.id)}
             onToggle={() => onToggleExercise(exercise.id)}
+            onSaveProgress={onSaveProgress ? (weight, reps) => onSaveProgress(exercise.id, weight, reps) : undefined}
+            defaultWeight={dayProgress[exercise.id]?.weight || ""}
+            defaultReps={dayProgress[exercise.id]?.reps || ""}
           />
         ))}
       </div>
