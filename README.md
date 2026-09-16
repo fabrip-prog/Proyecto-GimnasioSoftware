@@ -26,7 +26,7 @@ socios, sus rutinas, sus precios y su administrador.
 
 ```
 fitpulse-pro/   Frontend  — React 19 + Vite + Tailwind 4
-server/         Backend   — Node + Express + SQLite (better-sqlite3)
+server/         Backend   — Node + Express + SQLite (node:sqlite, incluido en Node)
 ```
 
 - Contraseñas con hash **scrypt** (nunca se guardan ni se devuelven en texto plano).
@@ -35,6 +35,10 @@ server/         Backend   — Node + Express + SQLite (better-sqlite3)
   pertenezca al gimnasio del token. Dos gimnasios pueden tener un socio con el
   mismo nombre de usuario sin pisarse.
 - Freno de fuerza bruta en el login (8 intentos por 15 minutos).
+
+Requiere **Node.js 22.5 o superior**. SQLite viene dentro de Node, así que la
+instalación no compila nada: no hacen falta Python ni compiladores de C++ en la
+máquina del gimnasio.
 
 ## Puesta en marcha
 

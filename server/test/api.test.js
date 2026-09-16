@@ -11,6 +11,7 @@ process.env.DATA_DIR = tmpDir;
 process.env.JWT_SECRET = "test-secret-not-used-in-production";
 
 const { createApp } = await import("../src/app.js");
+const { db } = await import("../src/db.js");
 
 let server;
 let baseUrl;
@@ -38,6 +39,8 @@ before(async () => {
 
 after(() => {
   server?.close();
+  // Windows keeps the database file locked until the connection is closed.
+  db.close();
   fs.rmSync(tmpDir, { recursive: true, force: true });
 });
 

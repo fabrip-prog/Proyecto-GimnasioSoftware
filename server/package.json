@@ -12,10 +12,12 @@
     "test": "node --test \"test/**/*.test.js\""
   },
   "dependencies": {
-    "better-sqlite3": "^13.0.3",
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
     "express": "^4.22.3",
     "jsonwebtoken": "^9.0.3"
+  },
+  "engines": {
+    "node": ">=22.5.0"
   }
 }

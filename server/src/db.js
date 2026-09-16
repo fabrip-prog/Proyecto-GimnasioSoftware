@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import Database from "better-sqlite3";
+import { DatabaseSync } from "node:sqlite";
 
 const DATA_DIR = process.env.DATA_DIR
   ? path.resolve(process.env.DATA_DIR)
@@ -10,7 +10,51 @@ fs.mkdirSync(DATA_DIR, { recursive: true });
 
 export const DB_PATH = path.join(DATA_DIR, "kinefix.db");
 
-export const db = new Database(DB_PATH);
+const connection = new DatabaseSync(DB_PATH);
+
+/**
+ * SQLite ships inside Node itself, so the server needs no native build step on
+ * any machine it gets installed on. This wrapper adds the two conveniences the
+ * rest of the code relies on — `pragma()` and `transaction()` — and normalises
+ * inserted row ids to plain numbers.
+ */
+export const db = {
+  exec: (sql) => connection.exec(sql),
+
+  close: () => connection.close(),
+
+  pragma: (statement) => connection.exec(`PRAGMA ${statement};`),
+
+  prepare(sql) {
+    const statement = connection.prepare(sql);
+    return {
+      get: (...params) => statement.get(...params),
+      all: (...params) => statement.all(...params),
+      run: (...params) => {
+        const result = statement.run(...params);
+        return {
+          changes: Number(result.changes),
+          lastInsertRowid: Number(result.lastInsertRowid),
+        };
+      },
+    };
+  },
+
+  /** Mirrors better-sqlite3's API: returns a function that runs atomically. */
+  transaction(fn) {
+    return (...args) => {
+      connection.exec("BEGIN");
+      try {
+        const result = fn(...args);
+        connection.exec("COMMIT");
+        return result;
+      } catch (err) {
+        connection.exec("ROLLBACK");
+        throw err;
+      }
+    };
+  },
+};
 
 db.pragma("journal_mode = WAL");
 db.pragma("foreign_keys = ON");
