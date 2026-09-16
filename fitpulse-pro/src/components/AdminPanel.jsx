@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   LogOut,
   Shield,
@@ -14,15 +14,26 @@ import {
   ChevronRight,
   Calendar,
   UserMinus,
+  UserPlus,
   Search,
   Crown,
-  CreditCard,
   CheckCircle2,
   XCircle,
   UserCog,
   ArrowLeft,
+  Settings,
+  Wallet,
+  TrendingUp,
 } from "lucide-react";
 import { useApp } from "../context/AppContext";
+import { api } from "../api/client";
+
+const money = (amount, currency = "ARS") =>
+  new Intl.NumberFormat("es-AR", {
+    style: "currency",
+    currency,
+    maximumFractionDigits: 0,
+  }).format(amount ?? 0);
 
 // ── Shared ───────────────────────────────────────────────────────────────────
 
@@ -165,9 +176,40 @@ const emptyExForm = { name: "", muscle: "", sets: 3, reps: "10", rest: "60s", in
 // ── User Progress View ───────────────────────────────────────────────────────
 
 function UserProgressView({ user, onBack }) {
-  const progress = user.progress || {};
-  const dates = Object.keys(progress).sort((a, b) => b.localeCompare(a));
-  
+  const [sessions, setSessions] = useState(null);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    let cancelled = false;
+    api
+      .memberProgress(user.id)
+      .then(({ entries }) => {
+        if (cancelled) return;
+        const grouped = {};
+        for (const entry of entries) {
+          (grouped[entry.date] ??= []).push(entry);
+        }
+        setSessions(grouped);
+      })
+      .catch((err) => !cancelled && setError(err.message));
+    return () => {
+      cancelled = true;
+    };
+  }, [user.id]);
+
+  const dates = Object.keys(sessions ?? {}).sort((a, b) => b.localeCompare(a));
+
+  const formatDate = (iso) => {
+    const [y, m, d] = iso.split("-").map(Number);
+    if (!y || !m || !d) return iso;
+    return new Date(y, m - 1, d).toLocaleDateString("es-AR", {
+      weekday: "long",
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    });
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -179,22 +221,27 @@ function UserProgressView({ user, onBack }) {
             <h2 className="text-xl font-bold text-white flex items-center gap-2">
               Progreso de {user.name}
             </h2>
+            {sessions && <p className="text-slate-500 text-xs">{dates.length} sesiones registradas</p>}
           </div>
         </div>
       </div>
-      
-      {dates.length === 0 ? (
+
+      {error && <p className="px-3 py-2 bg-red-500/10 border border-red-500/30 rounded-lg text-red-400 text-xs">{error}</p>}
+
+      {sessions === null ? (
+        <div className="text-center py-10 text-slate-500 text-sm">Cargando progreso…</div>
+      ) : dates.length === 0 ? (
         <div className="text-center py-10 text-slate-500 text-sm">Este usuario aún no ha registrado progresos.</div>
       ) : (
         <div className="space-y-4">
           {dates.map(date => (
             <div key={date} className="p-4 bg-slate-800/40 border border-slate-700/30 rounded-xl">
-              <h4 className="text-emerald-400 font-semibold mb-2">Día / Fecha: {date}</h4>
+              <h4 className="text-emerald-400 font-semibold mb-2 capitalize">{formatDate(date)}</h4>
               <div className="space-y-2">
-                {Object.entries(progress[date]).map(([exId, data]) => (
-                  <div key={exId} className="flex justify-between items-center text-sm p-2 bg-slate-900/50 rounded">
-                    <span className="text-slate-300 font-mono text-xs">ID Ejercicio: {exId}</span>
-                    <span className="text-cyan-400 font-medium">{data.weight} kg x {data.reps} reps</span>
+                {sessions[date].map((entry) => (
+                  <div key={entry.exercise_id} className="flex justify-between items-center gap-3 text-sm p-2 bg-slate-900/50 rounded">
+                    <span className="text-slate-300 truncate">{entry.exercise_name || entry.exercise_id}</span>
+                    <span className="text-cyan-400 font-medium shrink-0">{entry.weight} kg × {entry.reps} reps</span>
                   </div>
                 ))}
               </div>
@@ -206,11 +253,177 @@ function UserProgressView({ user, onBack }) {
   );
 }
 
+// ── New Member Modal ─────────────────────────────────────────────────────────
+
+const emptyMemberForm = { name: "", username: "", password: "", planDays: "", coach: "", coachTitle: "" };
+
+function NewMemberModal({ onClose }) {
+  const { createUser, availablePlanDays } = useApp();
+  const [form, setForm] = useState({ ...emptyMemberForm });
+  const [error, setError] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  async function handleSubmit(e) {
+    e.preventDefault();
+    setError("");
+    setSaving(true);
+    const result = await createUser({
+      ...form,
+      planDays: form.planDays === "" ? null : Number(form.planDays),
+    });
+    setSaving(false);
+
+    if (result.success) onClose();
+    else setError(result.error);
+  }
+
+  const field = "w-full px-3 py-2 bg-slate-800 border border-slate-600/50 rounded-lg text-white text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/40";
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+      <form onSubmit={handleSubmit} className="w-full max-w-md bg-slate-900 border border-slate-700/50 rounded-2xl shadow-2xl p-6 space-y-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-bold text-white flex items-center gap-2">
+            <UserPlus className="w-5 h-5 text-emerald-400" />Nuevo socio
+          </h2>
+          <button type="button" onClick={onClose} className="p-1 text-slate-400 hover:text-white"><X className="w-4 h-4" /></button>
+        </div>
+
+        <div>
+          <label className="block text-xs text-slate-400 mb-1">Nombre completo</label>
+          <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Ej: Juan Pérez" className={field} />
+        </div>
+
+        <div>
+          <label className="block text-xs text-slate-400 mb-1">Usuario</label>
+          <input value={form.username} onChange={(e) => setForm({ ...form, username: e.target.value.toLowerCase().replace(/\s/g, "") })} placeholder="Ej: juanperez" className={field} />
+        </div>
+
+        <div>
+          <label className="block text-xs text-slate-400 mb-1">Contraseña provisoria</label>
+          <input type="text" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} placeholder="Mínimo 6 caracteres" className={field} />
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="block text-xs text-slate-400 mb-1">Plan</label>
+            <select value={form.planDays} onChange={(e) => setForm({ ...form, planDays: e.target.value })} className={field}>
+              <option value="">Sin plan</option>
+              {availablePlanDays.sort((a, b) => a - b).map((d) => (
+                <option key={d} value={d}>{d} días/semana</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs text-slate-400 mb-1">Coach</label>
+            <input value={form.coach} onChange={(e) => setForm({ ...form, coach: e.target.value })} placeholder="Opcional" className={field} />
+          </div>
+        </div>
+
+        {error && <p className="px-3 py-2 bg-red-500/10 border border-red-500/30 rounded-lg text-red-400 text-xs">{error}</p>}
+
+        <button type="submit" disabled={saving} className="w-full py-2.5 bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 text-white rounded-lg text-sm font-medium transition-colors">
+          {saving ? "Creando…" : "Crear socio"}
+        </button>
+      </form>
+    </div>
+  );
+}
+
+// ── Edit Member Modal ────────────────────────────────────────────────────────
+
+function EditMemberModal({ user, onClose }) {
+  const { updateUser, availablePlanDays } = useApp();
+  const [form, setForm] = useState({
+    name: user.name,
+    planDays: user.planDays == null ? "" : String(user.planDays),
+    coach: user.coach ?? "",
+    coachTitle: user.coachTitle ?? "",
+    password: "",
+  });
+  const [error, setError] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  async function handleSubmit(e) {
+    e.preventDefault();
+    setError("");
+
+    if (form.password && form.password.length < 6) {
+      setError("La contraseña debe tener al menos 6 caracteres.");
+      return;
+    }
+
+    setSaving(true);
+    const result = await updateUser(user.id, {
+      name: form.name,
+      planDays: form.planDays === "" ? null : Number(form.planDays),
+      coach: form.coach,
+      coachTitle: form.coachTitle,
+      ...(form.password ? { password: form.password } : {}),
+    });
+    setSaving(false);
+
+    if (result.success) onClose();
+    else setError(result.error);
+  }
+
+  const field = "w-full px-3 py-2 bg-slate-800 border border-slate-600/50 rounded-lg text-white text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/40";
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+      <form onSubmit={handleSubmit} className="w-full max-w-md bg-slate-900 border border-slate-700/50 rounded-2xl shadow-2xl p-6 space-y-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-bold text-white flex items-center gap-2">
+            <Edit3 className="w-5 h-5 text-emerald-400" />Editar socio
+          </h2>
+          <button type="button" onClick={onClose} className="p-1 text-slate-400 hover:text-white"><X className="w-4 h-4" /></button>
+        </div>
+
+        <p className="text-slate-500 text-xs">@{user.username}</p>
+
+        <div>
+          <label className="block text-xs text-slate-400 mb-1">Nombre completo</label>
+          <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className={field} />
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="block text-xs text-slate-400 mb-1">Plan</label>
+            <select value={form.planDays} onChange={(e) => setForm({ ...form, planDays: e.target.value })} className={field}>
+              <option value="">Sin plan</option>
+              {availablePlanDays.sort((a, b) => a - b).map((d) => (
+                <option key={d} value={d}>{d} días/semana</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs text-slate-400 mb-1">Coach</label>
+            <input value={form.coach} onChange={(e) => setForm({ ...form, coach: e.target.value })} placeholder="Opcional" className={field} />
+          </div>
+        </div>
+
+        <div>
+          <label className="block text-xs text-slate-400 mb-1">Restablecer contraseña</label>
+          <input type="text" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} placeholder="Dejala vacía para no cambiarla" className={field} />
+        </div>
+
+        {error && <p className="px-3 py-2 bg-red-500/10 border border-red-500/30 rounded-lg text-red-400 text-xs">{error}</p>}
+
+        <button type="submit" disabled={saving} className="w-full py-2.5 bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 text-white rounded-lg text-sm font-medium transition-colors">
+          {saving ? "Guardando…" : "Guardar cambios"}
+        </button>
+      </form>
+    </div>
+  );
+}
+
 // ── Users Tab ────────────────────────────────────────────────────────────────
 
 function UsersTab({ onSelectUser, onSelectProgress }) {
   const { users, deleteUser, adminToggleMonthly, adminTogglePro, getCurrentMonth } = useApp();
   const [search, setSearch] = useState("");
+  const [showNewMember, setShowNewMember] = useState(false);
+  const [editingMember, setEditingMember] = useState(null);
   const currentMonth = getCurrentMonth();
 
   const filtered = users.filter(
@@ -226,7 +439,16 @@ function UsersTab({ onSelectUser, onSelectProgress }) {
           <Users className="w-5 h-5 text-emerald-400" />
           Usuarios Registrados ({users.length})
         </h3>
+        <button
+          onClick={() => setShowNewMember(true)}
+          className="flex items-center gap-1.5 px-3 py-2 bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 rounded-xl text-sm font-medium hover:bg-emerald-500/25 transition-all"
+        >
+          <UserPlus className="w-4 h-4" />Nuevo Socio
+        </button>
       </div>
+
+      {showNewMember && <NewMemberModal onClose={() => setShowNewMember(false)} />}
+      {editingMember && <EditMemberModal user={editingMember} onClose={() => setEditingMember(null)} />}
 
       <div className="relative">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
@@ -261,6 +483,13 @@ function UsersTab({ onSelectUser, onSelectProgress }) {
                     </p>
                   </div>
                   <div className="flex items-center gap-1.5 shrink-0">
+                    <button
+                      onClick={() => setEditingMember(user)}
+                      className="p-2 text-slate-500 hover:text-emerald-400 hover:bg-emerald-500/10 rounded-lg transition-all"
+                      title="Editar socio / restablecer contraseña"
+                    >
+                      <Edit3 className="w-4 h-4" />
+                    </button>
                     {/* Custom plan button */}
                     <button
                       onClick={() => onSelectUser(user)}
@@ -351,7 +580,6 @@ function CustomPlanEditor({ user, onBack }) {
   // Get fresh user data
   const freshUser = users.find((u) => u.id === user.id) || user;
   const customPlan = freshUser.customPlan;
-  const hasCustomPlan = customPlan && Object.keys(customPlan).length >= 0;
 
   const [expandedDay, setExpandedDay] = useState(null);
   const [editingExercise, setEditingExercise] = useState(null);
@@ -590,6 +818,7 @@ function PlansTab() {
   const [newDayFocus, setNewDayFocus] = useState("");
   const [addingExerciseTo, setAddingExerciseTo] = useState(null);
   const [newExForm, setNewExForm] = useState({ ...emptyExForm });
+  const [planError, setPlanError] = useState("");
 
   function startEditExercise(planDays, dayNum, exercise) {
     setEditingExercise({ planDays, dayNum, id: exercise.id });
@@ -625,11 +854,12 @@ function PlansTab() {
     setNewExForm({ ...emptyExForm });
   }
 
-  function handleCreatePlan() {
+  async function handleCreatePlan() {
     const days = parseInt(newPlanDays);
     if (isNaN(days) || days < 1 || days > 7) return;
-    const result = createPlan(days, {});
-    if (result.success) { setShowNewPlan(false); setNewPlanDays(""); setExpandedPlan(days); }
+    const result = await createPlan(days, {});
+    if (result.success) { setShowNewPlan(false); setNewPlanDays(""); setExpandedPlan(days); setPlanError(""); }
+    else setPlanError(result.error);
   }
 
   return (
@@ -652,8 +882,9 @@ function PlansTab() {
             <input type="number" min="1" max="7" value={newPlanDays} onChange={(e) => setNewPlanDays(e.target.value)}
               placeholder="Nº de días (1-7)" className="flex-1 px-3 py-2 bg-slate-800/80 border border-slate-600/50 rounded-lg text-white text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/40" />
             <button onClick={handleCreatePlan} className="px-4 py-2 bg-emerald-500 text-white rounded-lg text-sm font-medium hover:bg-emerald-600 transition-colors">Crear</button>
-            <button onClick={() => setShowNewPlan(false)} className="p-2 text-slate-400 hover:text-white"><X className="w-4 h-4" /></button>
+            <button onClick={() => { setShowNewPlan(false); setPlanError(""); }} className="p-2 text-slate-400 hover:text-white"><X className="w-4 h-4" /></button>
           </div>
+          {planError && <p className="text-red-400 text-xs">{planError}</p>}
         </div>
       )}
 
@@ -773,10 +1004,187 @@ function PlansTab() {
   );
 }
 
+// ── Billing Tab ──────────────────────────────────────────────────────────────
+
+function BillingTab() {
+  const { users, gym, getCurrentMonth, adminToggleMonthly } = useApp();
+  const [summary, setSummary] = useState(null);
+  const [error, setError] = useState("");
+  const currentMonth = getCurrentMonth();
+
+  // Re-read the summary whenever a due gets marked or cleared.
+  const paidSignature = users.map((u) => `${u.id}:${u.monthlyPaidMonth}`).join("|");
+
+  useEffect(() => {
+    let cancelled = false;
+    api
+      .paymentSummary()
+      .then((data) => !cancelled && setSummary(data))
+      .catch((err) => !cancelled && setError(err.message));
+    return () => {
+      cancelled = true;
+    };
+  }, [paidSignature]);
+
+  const pending = users.filter((u) => u.monthlyPaidMonth !== currentMonth);
+  const currency = gym?.currency ?? "ARS";
+
+  return (
+    <div className="space-y-5">
+      <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+        <Wallet className="w-5 h-5 text-emerald-400" />
+        Cobranzas de {currentMonth}
+      </h3>
+
+      {error && <p className="px-3 py-2 bg-red-500/10 border border-red-500/30 rounded-lg text-red-400 text-xs">{error}</p>}
+
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div className="p-4 bg-slate-800/40 border border-slate-700/30 rounded-xl">
+          <p className="text-slate-500 text-xs mb-1">Recaudado</p>
+          <p className="text-emerald-400 text-xl font-bold">{money(summary?.revenue, currency)}</p>
+        </div>
+        <div className="p-4 bg-slate-800/40 border border-slate-700/30 rounded-xl">
+          <p className="text-slate-500 text-xs mb-1">Socios</p>
+          <p className="text-white text-xl font-bold">{summary?.memberCount ?? users.length}</p>
+        </div>
+        <div className="p-4 bg-slate-800/40 border border-slate-700/30 rounded-xl">
+          <p className="text-slate-500 text-xs mb-1">Al día</p>
+          <p className="text-cyan-400 text-xl font-bold">{summary?.paidCount ?? 0}</p>
+        </div>
+        <div className="p-4 bg-slate-800/40 border border-slate-700/30 rounded-xl">
+          <p className="text-slate-500 text-xs mb-1">Pendientes</p>
+          <p className="text-amber-400 text-xl font-bold">{summary?.unpaidCount ?? pending.length}</p>
+        </div>
+      </div>
+
+      <div>
+        <h4 className="text-sm font-semibold text-white mb-2 flex items-center gap-2">
+          <span className="w-2 h-2 rounded-full bg-amber-400" />Cuotas pendientes ({pending.length})
+        </h4>
+        {pending.length === 0 ? (
+          <p className="text-slate-500 text-sm py-4">Todos los socios están al día. 🎉</p>
+        ) : (
+          <div className="space-y-2">
+            {pending.map((user) => (
+              <div key={user.id} className="flex items-center justify-between p-3 bg-slate-800/40 border border-slate-700/30 rounded-xl">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-emerald-500 to-cyan-500 flex items-center justify-center text-white font-bold text-xs shrink-0">
+                    {user.avatar}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-white text-sm font-medium truncate">{user.name}</p>
+                    <p className="text-slate-500 text-xs">@{user.username}</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => adminToggleMonthly(user.id)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 rounded-lg text-xs font-medium hover:bg-emerald-500/25 transition-all shrink-0"
+                >
+                  <CheckCircle2 className="w-3.5 h-3.5" />Registrar pago
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {summary?.byMonth?.length > 1 && (
+        <div>
+          <h4 className="text-sm font-semibold text-white mb-2 flex items-center gap-2">
+            <TrendingUp className="w-4 h-4 text-cyan-400" />Historial mensual
+          </h4>
+          <div className="space-y-1.5">
+            {summary.byMonth.map((row) => (
+              <div key={row.month} className="flex items-center justify-between px-3 py-2 bg-slate-800/30 rounded-lg text-sm">
+                <span className="text-slate-400 font-mono text-xs">{row.month}</span>
+                <span className="text-emerald-400 font-medium">{money(row.total, currency)}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Settings Tab ─────────────────────────────────────────────────────────────
+
+function SettingsTab() {
+  const { gym, updateGym } = useApp();
+  const [form, setForm] = useState({
+    name: gym?.name ?? "",
+    whatsapp: gym?.whatsapp ?? "",
+    monthlyPrice: String(gym?.pricing?.monthly ?? 0),
+    proPrice: String(gym?.pricing?.pro ?? 0),
+  });
+  const [status, setStatus] = useState(null);
+  const [saving, setSaving] = useState(false);
+
+  async function handleSave(e) {
+    e.preventDefault();
+    setSaving(true);
+    const result = await updateGym({
+      name: form.name,
+      whatsapp: form.whatsapp,
+      monthlyPrice: Number(form.monthlyPrice),
+      proPrice: Number(form.proPrice),
+    });
+    setSaving(false);
+    setStatus(result.success ? { ok: true, message: "Cambios guardados." } : { ok: false, message: result.error });
+  }
+
+  const field = "w-full px-3 py-2 bg-slate-800 border border-slate-600/50 rounded-lg text-white text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/40";
+
+  return (
+    <form onSubmit={handleSave} className="space-y-5 max-w-lg">
+      <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+        <Settings className="w-5 h-5 text-emerald-400" />Configuración del gimnasio
+      </h3>
+
+      <div>
+        <label className="block text-xs text-slate-400 mb-1">Nombre del gimnasio</label>
+        <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className={field} />
+      </div>
+
+      <div>
+        <label className="block text-xs text-slate-400 mb-1">WhatsApp de contacto</label>
+        <input value={form.whatsapp} onChange={(e) => setForm({ ...form, whatsapp: e.target.value })} placeholder="Ej: 3329534029" className={field} />
+        <p className="text-slate-600 text-xs mt-1">Los socios usan este número para coordinar pagos desde su panel.</p>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className="block text-xs text-slate-400 mb-1">Cuota mensual</label>
+          <input type="number" min="0" value={form.monthlyPrice} onChange={(e) => setForm({ ...form, monthlyPrice: e.target.value })} className={field} />
+        </div>
+        <div>
+          <label className="block text-xs text-slate-400 mb-1">Suscripción Pro</label>
+          <input type="number" min="0" value={form.proPrice} onChange={(e) => setForm({ ...form, proPrice: e.target.value })} className={field} />
+        </div>
+      </div>
+
+      <div className="p-3 bg-slate-800/40 border border-slate-700/30 rounded-xl">
+        <p className="text-slate-500 text-xs mb-1">Identificador para tus socios</p>
+        <p className="text-cyan-400 font-mono text-sm">{gym?.slug}</p>
+      </div>
+
+      {status && (
+        <p className={`px-3 py-2 rounded-lg text-xs border ${status.ok ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-400" : "bg-red-500/10 border-red-500/30 text-red-400"}`}>
+          {status.message}
+        </p>
+      )}
+
+      <button type="submit" disabled={saving} className="px-4 py-2.5 bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2">
+        <Save className="w-4 h-4" />{saving ? "Guardando…" : "Guardar cambios"}
+      </button>
+    </form>
+  );
+}
+
 // ── Main Admin Panel ─────────────────────────────────────────────────────────
 
 export default function AdminPanel() {
-  const { logout } = useApp();
+  const { logout, gym } = useApp();
   const [activeTab, setActiveTab] = useState("users");
   const [selectedUser, setSelectedUser] = useState(null);
   const [selectedProgressUser, setSelectedProgressUser] = useState(null);
@@ -791,7 +1199,7 @@ export default function AdminPanel() {
             </div>
             <div className="ml-3 hidden sm:block">
               <h1 className="text-white font-bold text-lg leading-none">Admin Panel</h1>
-              <p className="text-slate-400 text-xs">KineFix · Gestión</p>
+              <p className="text-slate-400 text-xs">{gym?.name ?? "KineFix"} · Gestión</p>
             </div>
           </div>
           <button onClick={logout}
@@ -803,9 +1211,11 @@ export default function AdminPanel() {
 
       <main className="max-w-5xl mx-auto px-4 py-6 space-y-6">
         {!selectedUser && !selectedProgressUser && (
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
             <TabButton active={activeTab === "users"} icon={Users} label="Usuarios" onClick={() => setActiveTab("users")} />
+            <TabButton active={activeTab === "billing"} icon={Wallet} label="Cobranzas" onClick={() => setActiveTab("billing")} />
             <TabButton active={activeTab === "plans"} icon={ClipboardList} label="Planes Compartidos" onClick={() => setActiveTab("plans")} />
+            <TabButton active={activeTab === "settings"} icon={Settings} label="Configuración" onClick={() => setActiveTab("settings")} />
           </div>
         )}
 
@@ -816,6 +1226,10 @@ export default function AdminPanel() {
             <UserProgressView user={selectedProgressUser} onBack={() => setSelectedProgressUser(null)} />
           ) : activeTab === "users" ? (
             <UsersTab onSelectUser={setSelectedUser} onSelectProgress={setSelectedProgressUser} />
+          ) : activeTab === "billing" ? (
+            <BillingTab />
+          ) : activeTab === "settings" ? (
+            <SettingsTab />
           ) : (
             <PlansTab />
           )}

@@ -1,7 +1,8 @@
-// ─── Mock Users & Training Plans ─────────────────────────────────────────────
-// Complete exercise database for FitPulse Pro
+// ─── Datos semilla ───────────────────────────────────────────────────────────
+// Plantillas de rutinas que recibe cada gimnasio nuevo, y los socios de la
+// cuenta de demostración.
 
-export const USERS = [
+export const DEMO_MEMBERS = [
   {
     id: 1,
     username: "user2dias",
@@ -755,9 +756,9 @@ const plan5Days = {
   },
 };
 
-// ─── Plan Mapping ────────────────────────────────────────────────────────────
+// ─── Planes por defecto ──────────────────────────────────────────────────────
 
-export const PLANS = {
+export const DEFAULT_PLANS = {
   2: plan2Days,
   3: plan3Days,
   5: plan5Days,

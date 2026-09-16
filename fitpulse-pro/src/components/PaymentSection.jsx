@@ -7,33 +7,34 @@ import {
   Receipt,
   Sparkles,
   Lock,
-  X,
-  ArrowRight,
 } from "lucide-react";
 import { useApp } from "../context/AppContext";
 
-function formatPrice(n) {
-  return new Intl.NumberFormat("es-AR", {
-    style: "currency",
-    currency: "ARS",
-    minimumFractionDigits: 0,
-  }).format(n);
-}
-
 export default function PaymentSection() {
-  const { currentUser, pricing, isMonthlyPaid } = useApp();
-  const [justPaid, setJustPaid] = useState(null);
+  const { currentUser, pricing, isMonthlyPaid, gym } = useApp();
   const [showHistory, setShowHistory] = useState(false);
 
   const monthlyPaid = isMonthlyPaid(currentUser.id);
   const proActive = currentUser.proActive;
 
+  const formatPrice = (n) =>
+    new Intl.NumberFormat("es-AR", {
+      style: "currency",
+      currency: gym?.currency ?? "ARS",
+      minimumFractionDigits: 0,
+    }).format(n ?? 0);
+
   function handleWhatsApp(type) {
-    const text = type === "monthly" 
-      ? `Hola! Soy ${currentUser.name} (${currentUser.username}). Quiero coordinar el pago de mi cuota mensual del gimnasio.` 
+    const text = type === "monthly"
+      ? `Hola! Soy ${currentUser.name} (${currentUser.username}). Quiero coordinar el pago de mi cuota mensual del gimnasio.`
       : `Hola! Soy ${currentUser.name} (${currentUser.username}). Quiero activar la suscripción Pro.`;
-    const url = `https://wa.me/3329534029?text=${encodeURIComponent(text)}`;
-    window.open(url, "_blank");
+
+    const phone = (gym?.whatsapp ?? "").replace(/\D/g, "");
+    if (!phone) {
+      alert("El gimnasio todavía no cargó un número de WhatsApp de contacto.");
+      return;
+    }
+    window.open(`https://wa.me/${phone}?text=${encodeURIComponent(text)}`, "_blank");
   }
 
   const currentMonth = new Date().toLocaleString("es-AR", {
@@ -43,18 +44,6 @@ export default function PaymentSection() {
 
   return (
     <>
-      {/* Success notification */}
-      {justPaid && (
-        <div className="fixed top-4 right-4 z-50 flex items-center gap-3 px-5 py-3 bg-emerald-500/20 border border-emerald-500/40 backdrop-blur-xl rounded-xl shadow-2xl animate-slide-in">
-          <CheckCircle2 className="w-5 h-5 text-emerald-400" />
-          <span className="text-sm text-emerald-300 font-medium">
-            {justPaid === "monthly"
-              ? "¡Cuota mensual pagada exitosamente!"
-              : "¡Suscripción Pro activada exitosamente!"}
-          </span>
-        </div>
-      )}
-
       {/* Payment cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         {/* Monthly card */}

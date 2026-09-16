@@ -82,7 +82,11 @@ export default function ExerciseCard({ exercise, completed, onToggle, index, onS
           className="mt-4 w-full flex items-center justify-center gap-1.5 py-2 text-xs font-medium text-slate-400 hover:text-emerald-400 bg-slate-700/20 hover:bg-slate-700/40 rounded-lg transition-all"
         >
           <Info className="w-3.5 h-3.5" />
-          {expanded ? "Ocultar instrucciones" : "Ver instrucciones de ejecución"}
+          {expanded
+            ? "Ocultar detalle"
+            : onSaveProgress
+              ? "Ver instrucciones y registrar carga"
+              : "Ver instrucciones de ejecución"}
           {expanded ? (
             <ChevronUp className="w-3.5 h-3.5" />
           ) : (
@@ -94,7 +98,7 @@ export default function ExerciseCard({ exercise, completed, onToggle, index, onS
       {/* Expandable instructions */}
       <div
         className={`overflow-hidden transition-all duration-300 ${
-          expanded ? "max-h-60 opacity-100" : "max-h-0 opacity-0"
+          expanded ? "max-h-[36rem] opacity-100" : "max-h-0 opacity-0"
         }`}
       >
         <div className="px-5 pb-5 pt-1 space-y-3">

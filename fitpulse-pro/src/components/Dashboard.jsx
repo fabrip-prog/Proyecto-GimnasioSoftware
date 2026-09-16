@@ -15,15 +15,36 @@ import { useApp } from "../context/AppContext";
 import RoutineDetail from "./RoutineDetail";
 import PaymentSection from "./PaymentSection";
 
+function todayIso() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(
+    d.getDate()
+  ).padStart(2, "0")}`;
+}
 
 function ProfileModal({ user, onClose, updateUser }) {
   const [name, setName] = useState(user.name);
-  const [password, setPassword] = useState(user.password);
+  const [password, setPassword] = useState("");
   const [goal, setGoal] = useState(user.goal || "Mantenerse en forma");
+  const [error, setError] = useState("");
+  const [saving, setSaving] = useState(false);
 
-  const handleSave = () => {
-    updateUser(user.id, { name, password, goal });
-    onClose();
+  const handleSave = async () => {
+    if (password && password.length < 6) {
+      setError("La contraseña debe tener al menos 6 caracteres.");
+      return;
+    }
+
+    setSaving(true);
+    const result = await updateUser(user.id, {
+      name,
+      goal,
+      ...(password ? { password } : {}),
+    });
+    setSaving(false);
+
+    if (result.success) onClose();
+    else setError(result.error);
   };
 
   return (
@@ -36,8 +57,8 @@ function ProfileModal({ user, onClose, updateUser }) {
             <input type="text" value={name} onChange={e => setName(e.target.value)} className="w-full px-3 py-2 bg-slate-800 border border-slate-600/50 rounded-lg text-white text-sm" />
           </div>
           <div>
-            <label className="block text-xs text-slate-400 mb-1">Contraseña</label>
-            <input type="text" value={password} onChange={e => setPassword(e.target.value)} className="w-full px-3 py-2 bg-slate-800 border border-slate-600/50 rounded-lg text-white text-sm" />
+            <label className="block text-xs text-slate-400 mb-1">Nueva contraseña</label>
+            <input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="Dejala vacía para no cambiarla" className="w-full px-3 py-2 bg-slate-800 border border-slate-600/50 rounded-lg text-white text-sm placeholder-slate-500" />
           </div>
           <div>
             <label className="block text-xs text-slate-400 mb-1">Objetivo Principal</label>
@@ -49,9 +70,14 @@ function ProfileModal({ user, onClose, updateUser }) {
             </select>
           </div>
         </div>
+        {error && (
+          <p className="mt-4 px-3 py-2 bg-red-500/10 border border-red-500/30 rounded-lg text-red-400 text-xs">{error}</p>
+        )}
         <div className="mt-6 flex gap-3 justify-end">
           <button onClick={onClose} className="px-4 py-2 text-sm text-slate-300 hover:text-white bg-slate-800 rounded-lg">Cancelar</button>
-          <button onClick={handleSave} className="px-4 py-2 text-sm text-white bg-emerald-500 hover:bg-emerald-600 rounded-lg">Guardar</button>
+          <button onClick={handleSave} disabled={saving} className="px-4 py-2 text-sm text-white bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 rounded-lg">
+            {saving ? "Guardando…" : "Guardar"}
+          </button>
         </div>
       </div>
     </div>
@@ -72,8 +98,14 @@ export default function Dashboard() {
     proActive && hasCustomPlan ? user.customPlan : plans[user.planDays];
   const isCustom = proActive && hasCustomPlan;
 
+  const todayKey = todayIso();
+  const loggedToday = useMemo(() => user.progress?.[todayKey] ?? {}, [user.progress, todayKey]);
+
   const [selectedDay, setSelectedDay] = useState(null);
-  const [completedExercises, setCompletedExercises] = useState(new Set());
+  // Series already logged today start ticked, so a reload doesn't lose the session.
+  const [completedExercises, setCompletedExercises] = useState(
+    () => new Set(Object.keys(loggedToday))
+  );
   const [isEditingPlan, setIsEditingPlan] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
 
@@ -89,9 +121,14 @@ export default function Dashboard() {
   const dayData = hasPlan ? activePlan[currentDay] : null;
 
   const handleSaveProgress = useCallback((exerciseId, weight, reps) => {
-    logExerciseProgress(user.id, currentDay.toString(), exerciseId, weight, reps);
+    const exercise = dayData?.exercises.find((ex) => ex.id === exerciseId);
+    logExerciseProgress(user.id, exerciseId, weight, reps, {
+      date: todayKey,
+      dayNumber: currentDay,
+      exerciseName: exercise?.name,
+    });
     setCompletedExercises((prev) => new Set([...prev, exerciseId]));
-  }, [user.id, currentDay, logExerciseProgress]);
+  }, [user.id, currentDay, dayData, todayKey, logExerciseProgress]);
 
   const toggleExercise = useCallback((exerciseId) => {
     setCompletedExercises((prev) => {
@@ -129,7 +166,7 @@ export default function Dashboard() {
     return Math.round((completedExercises.size / totalExercisesAllDays) * 100);
   }, [completedExercises.size, totalExercisesAllDays]);
 
-  const dayProgress = useMemo(() => {
+  const dayCompletionPercent = useMemo(() => {
     if (!dayData || dayData.exercises.length === 0) return 0;
     return Math.round(
       (completedInCurrentDay / dayData.exercises.length) * 100
@@ -389,13 +426,13 @@ export default function Dashboard() {
                           </span>
                         </span>
                         <span className="text-xs font-bold text-cyan-400">
-                          {dayProgress}%
+                          {dayCompletionPercent}%
                         </span>
                       </div>
                       <div className="w-full h-2 bg-slate-700/40 rounded-full overflow-hidden">
                         <div
                           className="h-full bg-gradient-to-r from-cyan-500 to-emerald-500 rounded-full transition-all duration-500 ease-out"
-                          style={{ width: `${dayProgress}%` }}
+                          style={{ width: `${dayCompletionPercent}%` }}
                         />
                       </div>
                     </div>
@@ -404,6 +441,8 @@ export default function Dashboard() {
                       dayData={dayData}
                       completedExercises={completedExercises}
                       onToggleExercise={toggleExercise}
+                      onSaveProgress={handleSaveProgress}
+                      dayProgress={loggedToday}
                     />
                   </>
                 )}
