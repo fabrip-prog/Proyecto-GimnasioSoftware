@@ -131,7 +131,58 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_payments_user ON payments (user_id);
   CREATE INDEX IF NOT EXISTS idx_payments_gym  ON payments (gym_id, month);
   CREATE INDEX IF NOT EXISTS idx_progress_user ON progress (user_id, date);
+  CREATE TABLE IF NOT EXISTS attendance (
+    id           INTEGER PRIMARY KEY AUTOINCREMENT,
+    gym_id       INTEGER NOT NULL REFERENCES gyms(id) ON DELETE CASCADE,
+    user_id      INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    date         TEXT    NOT NULL,
+    checked_in_at TEXT   NOT NULL,
+    UNIQUE (user_id, date)
+  );
+
+  CREATE TABLE IF NOT EXISTS audit_log (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    gym_id     INTEGER NOT NULL REFERENCES gyms(id) ON DELETE CASCADE,
+    actor_id   INTEGER,
+    actor_name TEXT    NOT NULL,
+    action     TEXT    NOT NULL,
+    target_id  INTEGER,
+    target_name TEXT,
+    detail     TEXT,
+    created_at TEXT    NOT NULL
+  );
+
+  CREATE TABLE IF NOT EXISTS password_requests (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    gym_id      INTEGER NOT NULL REFERENCES gyms(id) ON DELETE CASCADE,
+    user_id     INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    status      TEXT    NOT NULL DEFAULT 'pendiente',
+    created_at  TEXT    NOT NULL,
+    resolved_at TEXT,
+    UNIQUE (user_id, status)
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_attendance_gym ON attendance (gym_id, date);
+  CREATE INDEX IF NOT EXISTS idx_audit_gym      ON audit_log (gym_id, created_at);
 `);
+
+
+/**
+ * Agrega columnas a bases creadas por versiones anteriores. SQLite no tiene
+ * `ADD COLUMN IF NOT EXISTS`, así que primero se consulta el esquema.
+ */
+function addColumnIfMissing(table, column, definition) {
+  const columns = db.prepare(`PRAGMA table_info(${table})`).all();
+  if (columns.some((c) => c.name === column)) return;
+  db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
+}
+
+// Baja lógica: dar de baja a un socio no puede borrar su historial de pagos.
+addColumnIfMissing('users', 'active', 'INTEGER NOT NULL DEFAULT 1');
+addColumnIfMissing('users', 'deactivated_at', 'TEXT');
+
+// Teléfono del socio, para los recordatorios de cuota por WhatsApp.
+addColumnIfMissing('users', 'whatsapp', 'TEXT');
 
 // Billing periods follow the gym's wall clock, not UTC, so a payment taken at
 // 9pm in Buenos Aires is not filed against the next day/month.

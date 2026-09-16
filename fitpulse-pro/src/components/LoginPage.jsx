@@ -6,7 +6,9 @@ import {
   Dumbbell,
   Eye,
   EyeOff,
+  KeyRound,
   Loader2,
+  MessageCircle,
   UserPlus,
 } from "lucide-react";
 import { useApp } from "../context/AppContext";
@@ -64,6 +66,9 @@ export default function LoginPage() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
 
+  const [resetUsername, setResetUsername] = useState("");
+  const [resetResult, setResetResult] = useState(null);
+
   const [regName, setRegName] = useState("");
   const [regUsername, setRegUsername] = useState("");
   const [regPassword, setRegPassword] = useState("");
@@ -91,6 +96,7 @@ export default function LoginPage() {
   function switchView(next) {
     setView(next);
     setError("");
+    setResetResult(null);
   }
 
   async function handleLogin(e) {
@@ -118,6 +124,24 @@ export default function LoginPage() {
     const result = await register(gymSlug, regName.trim(), regUsername.trim(), regPassword);
     if (!result.success) setError(result.error);
     setLoading(false);
+  }
+
+  async function handlePasswordRequest(e) {
+    e.preventDefault();
+    setError("");
+
+    if (!gymSlug || !resetUsername.trim()) {
+      return setError("Elegí tu gimnasio y escribí tu usuario.");
+    }
+
+    setLoading(true);
+    try {
+      setResetResult(await api.requestPasswordReset(gymSlug, resetUsername.trim()));
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
   }
 
   async function handleGymRegister(e) {
@@ -225,6 +249,10 @@ export default function LoginPage() {
             </form>
 
             <div className="mt-5 pt-5 border-t border-line space-y-2">
+              <button onClick={() => switchView("reset")} className="btn-ghost w-full">
+                <KeyRound className="w-4 h-4" />
+                Olvidé mi contraseña
+              </button>
               <button onClick={() => switchView("register")} className="btn-ghost w-full">
                 <UserPlus className="w-4 h-4" />
                 Crear cuenta de socio
@@ -331,6 +359,84 @@ export default function LoginPage() {
                 {loading ? "Creando cuenta…" : "Crear cuenta y acceder"}
               </button>
             </form>
+          </div>
+        )}
+
+        {/* ─── Olvidé mi contraseña ─── */}
+        {view === "reset" && (
+          <div className="card p-6">
+            <button onClick={() => switchView("login")} className="btn-ghost btn-sm -ml-3 mb-4">
+              <ArrowLeft className="w-4 h-4" />
+              Volver
+            </button>
+
+            <h2 className="section-title">Olvidé mi contraseña</h2>
+
+            {resetResult ? (
+              <div className="mt-4 space-y-4">
+                <div className="alert-ok">
+                  <KeyRound className="w-4 h-4 shrink-0 mt-0.5" />
+                  <span>{resetResult.message}</span>
+                </div>
+
+                {resetResult.whatsapp && (
+                  <button
+                    onClick={() =>
+                      window.open(
+                        `https://wa.me/${resetResult.whatsapp.replace(/\D/g, "")}?text=${encodeURIComponent(
+                          `Hola! Soy ${resetUsername} y necesito restablecer la contraseña de mi cuenta.`
+                        )}`,
+                        "_blank"
+                      )
+                    }
+                    className="btn-primary w-full"
+                  >
+                    <MessageCircle className="w-4 h-4" />
+                    Avisar a {resetResult.gymName} por WhatsApp
+                  </button>
+                )}
+
+                <button onClick={() => switchView("login")} className="btn-secondary w-full">
+                  Volver al inicio de sesión
+                </button>
+              </div>
+            ) : (
+              <>
+                <p className="text-sm text-ink-soft mt-1.5 mb-5">
+                  Dejale el pedido a tu gimnasio. Te van a generar una contraseña provisoria y te la
+                  van a pasar.
+                </p>
+
+                <form onSubmit={handlePasswordRequest} className="space-y-4">
+                  {gymSelector}
+
+                  <div>
+                    <label className="label">Tu nombre de usuario</label>
+                    <input
+                      type="text"
+                      value={resetUsername}
+                      onChange={(e) => {
+                        setResetUsername(e.target.value.toLowerCase().replace(/\s/g, ""));
+                        setError("");
+                      }}
+                      placeholder="Ej: juanperez"
+                      className="input"
+                    />
+                  </div>
+
+                  <ErrorBanner message={error} />
+
+                  <button
+                    type="submit"
+                    disabled={loading || !gymSlug || !resetUsername}
+                    className="btn-primary w-full"
+                  >
+                    {loading && <Loader2 className="w-4 h-4 animate-spin" />}
+                    {loading ? "Enviando…" : "Enviar pedido"}
+                  </button>
+                </form>
+              </>
+            )}
           </div>
         )}
 

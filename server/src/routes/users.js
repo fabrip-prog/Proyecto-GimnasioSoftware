@@ -2,6 +2,7 @@ import { Router } from "express";
 import { db, nowIso, today } from "../db.js";
 import { authenticate, hashPassword, requireOwner } from "../auth.js";
 import { serializeUser } from "../serialize.js";
+import * as audit from "../audit.js";
 
 const router = Router();
 router.use(authenticate);
@@ -30,14 +31,19 @@ function loadTarget(req, res) {
 }
 
 router.get("/", requireOwner, (req, res) => {
+  // ?incluirBajas=1 muestra también a los socios dados de baja.
+  const includeInactive = req.query.incluirBajas === "1";
   const rows = db
-    .prepare("SELECT * FROM users WHERE gym_id = ? AND role = 'member' ORDER BY name")
+    .prepare(
+      `SELECT * FROM users WHERE gym_id = ? AND role = 'member'
+       ${includeInactive ? "" : "AND active = 1"} ORDER BY active DESC, name`
+    )
     .all(req.gymId);
   res.json({ users: rows.map((u) => serializeUser(u, { includeHistory: false })) });
 });
 
 router.post("/", requireOwner, (req, res) => {
-  const { name, username, password, planDays, coach, coachTitle } = req.body ?? {};
+  const { name, username, password, planDays, coach, coachTitle, whatsapp } = req.body ?? {};
   if (!name?.trim() || !username?.trim() || !password) {
     return res.status(400).json({ error: "Nombre, usuario y contraseña son obligatorios." });
   }
@@ -55,8 +61,8 @@ router.post("/", requireOwner, (req, res) => {
   const info = db
     .prepare(
       `INSERT INTO users (gym_id, username, password_hash, name, role, avatar, plan_label, plan_days,
-                          coach, coach_title, start_date, created_at)
-       VALUES (?, ?, ?, ?, 'member', ?, ?, ?, ?, ?, ?, ?)`
+                          coach, coach_title, whatsapp, start_date, created_at)
+       VALUES (?, ?, ?, ?, 'member', ?, ?, ?, ?, ?, ?, ?, ?)`
     )
     .run(
       req.gymId,
@@ -68,11 +74,13 @@ router.post("/", requireOwner, (req, res) => {
       days,
       coach?.trim() || null,
       coachTitle?.trim() || null,
+      whatsapp?.trim() || null,
       today(),
       nowIso()
     );
 
   const created = db.prepare("SELECT * FROM users WHERE id = ?").get(info.lastInsertRowid);
+  audit.record(req.user, "socio.alta", { target: created });
   res.status(201).json({ user: serializeUser(created) });
 });
 
@@ -81,6 +89,7 @@ const EDITABLE = {
   goal: (v) => ["goal", v == null ? null : String(v)],
   coach: (v) => ["coach", v == null ? null : String(v)],
   coachTitle: (v) => ["coach_title", v == null ? null : String(v)],
+  whatsapp: (v) => ["whatsapp", v == null || v === "" ? null : String(v).trim()],
   plan: (v) => ["plan_label", String(v)],
   planDays: (v) => ["plan_days", v == null ? null : Number(v)],
 };
@@ -129,14 +138,59 @@ router.patch("/:id", (req, res) => {
   res.json({ user: serializeUser(updated) });
 });
 
+/**
+ * Baja lógica. Borrar la fila arrastraría los pagos del socio por la clave
+ * foránea en cascada y alteraría la recaudación de meses ya cerrados, así que
+ * el socio se desactiva y su historial queda intacto.
+ */
 router.delete("/:id", requireOwner, (req, res) => {
+  const target = findInGym.get(Number(req.params.id), req.gymId);
+  if (!target) return res.status(404).json({ error: "Usuario no encontrado." });
+  if (target.role === "owner") {
+    return res.status(400).json({ error: "No se puede dar de baja a la cuenta de administrador." });
+  }
+
+  db.prepare(
+    "UPDATE users SET active = 0, deactivated_at = ? WHERE id = ? AND gym_id = ?"
+  ).run(today(), target.id, req.gymId);
+
+  audit.record(req.user, "socio.baja", { target });
+  res.json({ user: serializeUser(findInGym.get(target.id, req.gymId)) });
+});
+
+router.post("/:id/reactivar", requireOwner, (req, res) => {
+  const target = findInGym.get(Number(req.params.id), req.gymId);
+  if (!target) return res.status(404).json({ error: "Usuario no encontrado." });
+
+  db.prepare(
+    "UPDATE users SET active = 1, deactivated_at = NULL WHERE id = ? AND gym_id = ?"
+  ).run(target.id, req.gymId);
+
+  audit.record(req.user, "socio.reactivacion", { target });
+  res.json({ user: serializeUser(findInGym.get(target.id, req.gymId)) });
+});
+
+/** Borrado definitivo, sólo para socios sin ningún pago registrado. */
+router.delete("/:id/definitivo", requireOwner, (req, res) => {
   const target = findInGym.get(Number(req.params.id), req.gymId);
   if (!target) return res.status(404).json({ error: "Usuario no encontrado." });
   if (target.role === "owner") {
     return res.status(400).json({ error: "No se puede eliminar la cuenta de administrador." });
   }
 
+  const payments = db
+    .prepare("SELECT COUNT(*) AS n FROM payments WHERE user_id = ?")
+    .get(target.id).n;
+
+  if (payments > 0) {
+    return res.status(409).json({
+      error:
+        "Este socio tiene pagos registrados. Para no alterar la contabilidad sólo puede darse de baja, no eliminarse.",
+    });
+  }
+
   db.prepare("DELETE FROM users WHERE id = ? AND gym_id = ?").run(target.id, req.gymId);
+  audit.record(req.user, "socio.eliminacion", { target });
   res.json({ ok: true });
 });
 

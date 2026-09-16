@@ -14,12 +14,17 @@ socios, sus rutinas, sus precios y su administrador.
 - Edición de su perfil, objetivo y contraseña.
 
 **Para el gimnasio (administrador)**
-- Alta, edición y baja de socios.
+- Alta, edición y baja de socios, con reactivación.
+- Restablecimiento de contraseñas, incluidos los pedidos que dejan los socios.
 - Marcar cuotas pagadas y activar/desactivar Pro.
 - Panel de cobranzas: recaudado del mes, socios al día, pendientes e historial mensual.
+- Recordatorios de cuota vencida por WhatsApp, con el texto ya armado.
+- Control de asistencia diaria, con el historial de los últimos 30 días.
 - Editor de planes compartidos (días, ejercicios, series, reps, descanso, instrucciones, media).
 - Planes personalizados por socio para quienes tienen Pro.
 - Lectura del progreso registrado por cada socio.
+- Exportación de socios y pagos a CSV, para el contador.
+- Registro de actividad: quién cobró, dio de alta o de baja, y cuándo.
 - Configuración de nombre, WhatsApp y precios.
 
 ## Arquitectura
@@ -35,6 +40,11 @@ server/         Backend   — Node + Express + SQLite (node:sqlite, incluido en 
   pertenezca al gimnasio del token. Dos gimnasios pueden tener un socio con el
   mismo nombre de usuario sin pisarse.
 - Freno de fuerza bruta en el login (8 intentos por 15 minutos).
+- **Baja lógica**: dar de baja a un socio no borra su historial de pagos, para que
+  la recaudación de meses ya cerrados no cambie nunca. Sólo se puede borrar de
+  verdad a quien no tiene ningún pago registrado.
+- El mes de facturación lo calcula el servidor con la zona horaria del gimnasio,
+  no el navegador del usuario.
 
 Requiere **Node.js 22.5 o superior**. SQLite viene dentro de Node, así que la
 instalación no compila nada: no hacen falta Python ni compiladores de C++ en la
@@ -68,8 +78,10 @@ gimnasio real con su administrador y los planes de 2, 3 y 5 días ya cargados.
 npm test
 ```
 
-36 tests de integración sobre la API: onboarding de gimnasios, autenticación,
-aislamiento entre gimnasios, permisos de socio, cuotas, planes y progreso.
+65 tests de integración sobre la API: onboarding de gimnasios, autenticación,
+aislamiento entre gimnasios, permisos de socio, cuotas, planes, progreso,
+bajas lógicas, asistencia, restablecimiento de contraseñas, recordatorios,
+exportación y auditoría.
 
 ## Configuración
 
@@ -83,6 +95,10 @@ Copiá `server/.env.example` a `server/.env` y completalo.
 | `CORS_ORIGIN` | Dominios autorizados, separados por coma. Vacío = cualquiera (solo dev). |
 | `DATA_DIR`    | Carpeta de la base SQLite (por defecto `server/data`).                |
 | `TZ_NAME`     | Zona horaria para fechar cuotas (por defecto Buenos Aires).           |
+| `BACKUP_DIR`   | Carpeta de respaldos (por defecto `server/data/backups`).            |
+| `BACKUP_KEEP`  | Cuántos respaldos conservar (por defecto 14).                        |
+| `BACKUP_INTERVAL_HOURS` | Cada cuánto respaldar (por defecto 24).                  |
+| `BACKUP_DISABLED` | `1` desactiva los respaldos automáticos.                        |
 
 Generá el secreto con:
 
@@ -118,14 +134,28 @@ En el servidor definí `CORS_ORIGIN=https://tudominio.com`.
 
 ### Respaldos
 
-Toda la información vive en `server/data/kinefix.db`. Copiá ese archivo (junto a
-`kinefix.db-wal` si existe) para tener un respaldo completo. Programá una copia
-diaria antes de vender el sistema a un cliente.
+El servidor genera un respaldo al arrancar y después cada 24 horas, en
+`server/data/backups/`, conservando los últimos 14. Usa `VACUUM INTO` de SQLite,
+que produce una copia consistente aunque haya escrituras en curso — copiar el
+archivo a mano con WAL activo puede dejar un respaldo corrupto.
+
+Se controla con `BACKUP_DIR`, `BACKUP_KEEP`, `BACKUP_INTERVAL_HOURS` y
+`BACKUP_DISABLED=1`.
+
+**Igual conviene sacar esas copias de la máquina**: un respaldo en el mismo disco
+no sirve si el disco se rompe. Programá una copia a un pendrive o a la nube.
 
 ## Pendientes conocidos
 
 - El cobro se registra a mano por el administrador: los socios coordinan por
   WhatsApp y el gimnasio confirma el pago. No hay integración con una pasarela
   (Mercado Pago u otra) todavía.
-- No hay recuperación de contraseña por email; el administrador la restablece
-  desde el panel.
+- Los recordatorios y las contraseñas provisorias se mandan abriendo WhatsApp
+  Web: el sistema arma el mensaje pero el envío lo hace una persona. No hay
+  correo ni mensajería automática.
+- La sesión se guarda en `localStorage`. Es suficiente para este caso, pero ante
+  un XSS el token quedaría expuesto; una cookie `httpOnly` sería más estricta.
+- No hay navegación por URL: no se puede compartir un enlace a una pantalla
+  concreta y el botón "atrás" del navegador sale de la aplicación.
+- El listado de socios no está paginado. Con cientos de socios conviene agregarlo.
+- No hay tests automáticos de la interfaz; sí de la API (65).

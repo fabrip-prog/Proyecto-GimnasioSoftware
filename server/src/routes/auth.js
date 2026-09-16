@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { db, nowIso, today } from "../db.js";
+import { currentMonth, db, nowIso, today } from "../db.js";
 import {
   authenticate,
   clearLoginAttempts,
@@ -59,6 +59,12 @@ router.post("/login", (req, res) => {
   if (!user || !verifyPassword(String(password), user.password_hash)) {
     recordFailedLogin(throttleKey);
     return res.status(401).json({ error: "Usuario o contraseña incorrectos." });
+  }
+
+  if (!user.active) {
+    return res.status(403).json({
+      error: "Tu cuenta está dada de baja. Contactá al gimnasio para reactivarla.",
+    });
   }
 
   clearLoginAttempts(throttleKey);
@@ -185,6 +191,44 @@ router.post("/gyms/register", (req, res) => {
   });
 });
 
+/**
+ * "Olvidé mi contraseña". Este despliegue no manda correo, así que el pedido
+ * queda encolado para que el gimnasio lo resuelva: el dueño lo ve en su panel,
+ * genera una clave temporal y se la pasa al socio por WhatsApp.
+ */
+router.post("/password-request", (req, res) => {
+  const { gymSlug, username } = req.body ?? {};
+  if (!gymSlug || !username?.trim()) {
+    return res.status(400).json({ error: "Indicá tu gimnasio y tu nombre de usuario." });
+  }
+
+  const gym = findGymBySlug.get(String(gymSlug));
+  const user = gym ? findUser.get(gym.id, String(username).toLowerCase().trim()) : null;
+
+  // Respuesta siempre igual, para no revelar qué usuarios existen.
+  const genericResponse = {
+    ok: true,
+    message:
+      "Si el usuario existe, el gimnasio va a recibir tu pedido y te va a contactar para restablecer la contraseña.",
+    whatsapp: gym?.whatsapp ?? null,
+    gymName: gym?.name ?? null,
+  };
+
+  if (!user || !user.active) return res.json(genericResponse);
+
+  const pending = db
+    .prepare("SELECT id FROM password_requests WHERE user_id = ? AND status = 'pendiente'")
+    .get(user.id);
+
+  if (!pending) {
+    db.prepare(
+      "INSERT INTO password_requests (gym_id, user_id, status, created_at) VALUES (?, ?, 'pendiente', ?)"
+    ).run(gym.id, user.id, nowIso());
+  }
+
+  res.json(genericResponse);
+});
+
 // Session bootstrap: everything the app needs for the signed-in principal.
 router.get("/me", authenticate, (req, res) => {
   const gym = db.prepare("SELECT * FROM gyms WHERE id = ?").get(req.gymId);
@@ -194,11 +238,18 @@ router.get("/me", authenticate, (req, res) => {
     user: serializeUser(req.user),
     gym: serializeGym(gym),
     plans: serializePlans(req.gymId),
+    // El mes de facturación lo define el servidor: si lo calculara el navegador,
+    // una máquina en otra zona horaria mostraría el estado de cuota equivocado
+    // en el cambio de mes.
+    currentMonth: currentMonth(),
+    today: today(),
     // The roster skips per-member history: it would grow without bound and the
     // panel only needs it when opening one member's progress.
     users: isOwner
       ? db
-          .prepare("SELECT * FROM users WHERE gym_id = ? AND role = 'member' ORDER BY name")
+          .prepare(
+            "SELECT * FROM users WHERE gym_id = ? AND role = 'member' AND active = 1 ORDER BY name"
+          )
           .all(req.gymId)
           .map((u) => serializeUser(u, { includeHistory: false }))
       : [],

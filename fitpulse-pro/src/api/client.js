@@ -129,4 +129,53 @@ export const api = {
 
   logProgress: (data) => request("/progress", { method: "POST", body: data }),
   memberProgress: (userId) => request(`/progress/${userId}`),
+
+  // ── Socios dados de baja ──────────────────────────────────────────────────
+  listUsersWithInactive: () => request("/users?incluirBajas=1"),
+  reactivateUser: (id) => request(`/users/${id}/reactivar`, { method: "POST" }),
+  deleteUserForever: (id) => request(`/users/${id}/definitivo`, { method: "DELETE" }),
+
+  // ── Asistencia ────────────────────────────────────────────────────────────
+  checkIn: (userId) => request(`/asistencia/checkin/${userId}`, { method: "POST" }),
+  undoCheckIn: (userId) => request(`/asistencia/checkin/${userId}`, { method: "DELETE" }),
+  attendanceToday: () => request("/asistencia/hoy"),
+  memberAttendance: (userId) => request(`/asistencia/${userId}`),
+
+  // ── Contraseñas ───────────────────────────────────────────────────────────
+  requestPasswordReset: (gymSlug, username) =>
+    request("/auth/password-request", {
+      method: "POST",
+      auth: false,
+      body: { gymSlug, username },
+    }),
+  passwordRequests: () => request("/admin/password-requests"),
+  resolvePasswordRequest: (id) =>
+    request(`/admin/password-requests/${id}/resolver`, { method: "POST" }),
+  dismissPasswordRequest: (id) =>
+    request(`/admin/password-requests/${id}`, { method: "DELETE" }),
+
+  // ── Recordatorios y auditoría ─────────────────────────────────────────────
+  reminders: () => request("/admin/recordatorios"),
+  auditLog: () => request("/admin/auditoria"),
+
+  /** Las exportaciones descargan un archivo, así que no pasan por request(). */
+  exportUrl: (which) => `${BASE_URL}/admin/export/${which}.csv`,
+
+  async downloadExport(which, filename) {
+    const response = await fetch(this.exportUrl(which), {
+      headers: { authorization: `Bearer ${getToken()}` },
+    });
+    if (!response.ok) {
+      const payload = await response.json().catch(() => ({}));
+      throw new ApiError(payload.error || "No se pudo exportar.", response.status);
+    }
+
+    const blob = await response.blob();
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename;
+    link.click();
+    URL.revokeObjectURL(url);
+  },
 };

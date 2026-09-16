@@ -2,6 +2,7 @@ import { Router } from "express";
 import { currentMonth, db, nowIso, today } from "../db.js";
 import { authenticate, requireOwner } from "../auth.js";
 import { serializeUser } from "../serialize.js";
+import * as audit from "../audit.js";
 
 const router = Router();
 router.use(authenticate);
@@ -55,6 +56,11 @@ router.post("/", requireOwner, (req, res) => {
     }
   })();
 
+  audit.record(req.user, `pago.${type}`, {
+    target: user,
+    detail: `${finalAmount} (${paidOn})`,
+  });
+
   res.status(201).json({ user: serializeUser(findUser.get(user.id, req.gymId)) });
 });
 
@@ -80,6 +86,11 @@ router.post("/monthly/toggle/:userId", requireOwner, (req, res) => {
        VALUES (?, ?, 'monthly', ?, ?, ?, ?, 'efectivo', ?)`
     ).run(req.gymId, user.id, LABELS.monthly, gym.monthly_price, today(), month, nowIso());
   }
+
+  audit.record(req.user, existing ? "cuota.anulada" : "cuota.registrada", {
+    target: user,
+    detail: month,
+  });
 
   res.json({ user: serializeUser(findUser.get(user.id, req.gymId)) });
 });

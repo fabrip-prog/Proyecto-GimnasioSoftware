@@ -1,14 +1,16 @@
 import { createContext, useCallback, useContext, useEffect, useState } from "react";
 import { ApiError, api, getToken, setToken } from "../api/client";
+import { useToast } from "../components/Toasts";
 
 const AppContext = createContext(null);
 
-function getCurrentMonth() {
+/** Respaldo local, sólo hasta que el servidor informa su propio calendario. */
+function localMonth() {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
 }
 
-function todayIso() {
+function localToday() {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(
     d.getDate()
@@ -16,11 +18,15 @@ function todayIso() {
 }
 
 export function AppProvider({ children }) {
+  const toast = useToast();
   const [currentUser, setCurrentUser] = useState(null);
   const [gym, setGym] = useState(null);
   const [users, setUsers] = useState([]);
   const [plans, setPlans] = useState({});
   const [booting, setBooting] = useState(Boolean(getToken()));
+  // El mes de facturación lo fija el servidor, para que una máquina con otra
+  // zona horaria no muestre el estado de cuota equivocado en el cambio de mes.
+  const [calendar, setCalendar] = useState({ month: localMonth(), today: localToday() });
 
   const clearSession = useCallback(() => {
     setToken(null);
@@ -42,6 +48,7 @@ export function AppProvider({ children }) {
     setGym(data.gym);
     setPlans(data.plans);
     setUsers(data.users);
+    if (data.currentMonth) setCalendar({ month: data.currentMonth, today: data.today });
   }, []);
 
   // Restore a previous session on reload.
@@ -53,20 +60,23 @@ export function AppProvider({ children }) {
   }, [loadWorkspace, clearSession]);
 
   /**
-   * Runs an API mutation, funnelling failures into a {success,error} result so
-   * callers never have to deal with exceptions, and dropping the session if the
-   * token went stale.
+   * Ejecuta una operación contra la API y convierte los fallos en
+   * {success, error}, de modo que ningún componente tenga que atrapar
+   * excepciones. Salvo que se pida `silent` (cuando la pantalla ya muestra el
+   * error al lado del formulario), el fallo se avisa con un cartel: antes estas
+   * llamadas fallaban sin que nadie se enterara.
    */
   const run = useCallback(
-    async (operation) => {
+    async (operation, { silent = false } = {}) => {
       try {
         return { success: true, data: await operation() };
       } catch (err) {
         if (err instanceof ApiError && err.status === 401) clearSession();
+        if (!silent) toast.error(err.message);
         return { success: false, error: err.message };
       }
     },
-    [clearSession]
+    [clearSession, toast]
   );
 
   /** Keeps the member list and the signed-in user in step after a mutation. */
@@ -80,7 +90,7 @@ export function AppProvider({ children }) {
 
   const login = useCallback(
     async (gymSlug, username, password) => {
-      const result = await run(() => api.login(gymSlug, username, password));
+      const result = await run(() => api.login(gymSlug, username, password), { silent: true });
       if (!result.success) return result;
 
       applySession(result.data);
@@ -92,7 +102,9 @@ export function AppProvider({ children }) {
 
   const register = useCallback(
     async (gymSlug, name, username, password) => {
-      const result = await run(() => api.registerMember(gymSlug, name, username, password));
+      const result = await run(() => api.registerMember(gymSlug, name, username, password), {
+        silent: true,
+      });
       if (!result.success) return result;
 
       applySession(result.data);
@@ -104,7 +116,7 @@ export function AppProvider({ children }) {
 
   const registerGym = useCallback(
     async (data) => {
-      const result = await run(() => api.registerGym(data));
+      const result = await run(() => api.registerGym(data), { silent: true });
       if (!result.success) return result;
 
       applySession(result.data);
@@ -120,7 +132,7 @@ export function AppProvider({ children }) {
 
   const createUser = useCallback(
     async (data) => {
-      const result = await run(() => api.createUser(data));
+      const result = await run(() => api.createUser(data), { silent: true });
       if (result.success) setUsers((prev) => [...prev, result.data.user]);
       return result;
     },
@@ -129,7 +141,7 @@ export function AppProvider({ children }) {
 
   const updateUser = useCallback(
     async (userId, updates) => {
-      const result = await run(() => api.updateUser(userId, updates));
+      const result = await run(() => api.updateUser(userId, updates), { silent: true });
       if (result.success) mergeUser(result.data.user);
       return result;
     },
@@ -180,9 +192,9 @@ export function AppProvider({ children }) {
         userId == null || userId === currentUser?.id
           ? currentUser
           : users.find((u) => u.id === userId);
-      return user?.monthlyPaidMonth === getCurrentMonth();
+      return user?.monthlyPaidMonth === calendar.month;
     },
-    [users, currentUser]
+    [users, currentUser, calendar.month]
   );
 
   // ── Planes compartidos ────────────────────────────────────────────────────
@@ -292,12 +304,12 @@ export function AppProvider({ children }) {
           exerciseId,
           weight,
           reps,
-          date: extra.date ?? todayIso(),
+          date: extra.date ?? calendar.today,
           dayNumber: extra.dayNumber,
           exerciseName: extra.exerciseName,
         })
       ),
-    [withUser]
+    [withUser, calendar.today]
   );
 
   // ── Configuración del gimnasio ────────────────────────────────────────────
@@ -353,7 +365,10 @@ export function AppProvider({ children }) {
 
     logExerciseProgress,
     updateGym,
-    getCurrentMonth,
+    reload: loadWorkspace,
+    calendar,
+    getCurrentMonth: () => calendar.month,
+    today: calendar.today,
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

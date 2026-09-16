@@ -1,10 +1,12 @@
 import { useState } from "react";
 import { CheckCircle2, Crown, Calendar, Receipt, Lock, MessageCircle } from "lucide-react";
 import { useApp } from "../context/AppContext";
+import { useToast } from "./Toasts";
 
 export default function PaymentSection() {
   const { currentUser, pricing, isMonthlyPaid, gym } = useApp();
   const [showHistory, setShowHistory] = useState(false);
+  const toast = useToast();
 
   const monthlyPaid = isMonthlyPaid(currentUser.id);
   const proActive = currentUser.proActive;
@@ -24,7 +26,7 @@ export default function PaymentSection() {
 
     const phone = (gym?.whatsapp ?? "").replace(/\D/g, "");
     if (!phone) {
-      alert("El gimnasio todavía no cargó un número de WhatsApp de contacto.");
+      toast.error("El gimnasio todavía no cargó un número de WhatsApp de contacto.");
       return;
     }
     window.open(`https://wa.me/${phone}?text=${encodeURIComponent(text)}`, "_blank");

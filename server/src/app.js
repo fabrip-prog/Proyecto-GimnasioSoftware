@@ -9,6 +9,8 @@ import plansRoutes from "./routes/plans.js";
 import paymentsRoutes from "./routes/payments.js";
 import progressRoutes from "./routes/progress.js";
 import gymRoutes from "./routes/gym.js";
+import attendanceRoutes from "./routes/attendance.js";
+import adminRoutes from "./routes/admin.js";
 
 export function createApp() {
   const app = express();
@@ -29,6 +31,8 @@ export function createApp() {
   app.use("/api/payments", paymentsRoutes);
   app.use("/api/progress", progressRoutes);
   app.use("/api/gym", gymRoutes);
+  app.use("/api/asistencia", attendanceRoutes);
+  app.use("/api/admin", adminRoutes);
 
   // Serve the built frontend when it exists, so a single process can host the
   // whole product in production.

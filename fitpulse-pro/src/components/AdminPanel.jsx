@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   AlertCircle,
   ArrowLeft,
@@ -15,18 +15,27 @@ import {
   Save,
   Search,
   Settings,
+  ShieldCheck,
   Trash2,
   TrendingUp,
   UserCog,
   UserMinus,
   UserPlus,
+  UserCheck,
   Users,
+  RotateCcw,
   Wallet,
   X,
   XCircle,
 } from "lucide-react";
 import { useApp } from "../context/AppContext";
 import { api } from "../api/client";
+import { useConfirm } from "./Dialog";
+import { useToast } from "./Toasts";
+import AttendanceTab from "./admin/AttendanceTab";
+import AuditTab from "./admin/AuditTab";
+import PasswordRequests from "./admin/PasswordRequests";
+import RemindersPanel from "./admin/RemindersPanel";
 
 const money = (amount, currency = "ARS") =>
   new Intl.NumberFormat("es-AR", {
@@ -304,7 +313,7 @@ function UserProgressView({ user, onBack }) {
 
 // ── Alta de socio ────────────────────────────────────────────────────────────
 
-const emptyMemberForm = { name: "", username: "", password: "", planDays: "", coach: "" };
+const emptyMemberForm = { name: "", username: "", password: "", planDays: "", coach: "", whatsapp: "" };
 
 function NewMemberModal({ onClose }) {
   const { createUser, availablePlanDays } = useApp();
@@ -377,6 +386,17 @@ function NewMemberModal({ onClose }) {
           <p className="hint">El socio puede cambiarla después desde su perfil.</p>
         </div>
 
+        <div>
+          <label className="label">WhatsApp</label>
+          <input
+            value={form.whatsapp}
+            onChange={(e) => setForm({ ...form, whatsapp: e.target.value })}
+            placeholder="Ej: 3415551234"
+            className="input"
+          />
+          <p className="hint">Necesario para mandarle el recordatorio de cuota.</p>
+        </div>
+
         <div className="grid grid-cols-2 gap-3">
           <div>
             <label className="label">Plan</label>
@@ -429,6 +449,7 @@ function EditMemberModal({ user, onClose }) {
     name: user.name,
     planDays: user.planDays == null ? "" : String(user.planDays),
     coach: user.coach ?? "",
+    whatsapp: user.whatsapp ?? "",
     password: "",
   });
   const [error, setError] = useState("");
@@ -448,6 +469,7 @@ function EditMemberModal({ user, onClose }) {
       name: form.name,
       planDays: form.planDays === "" ? null : Number(form.planDays),
       coach: form.coach,
+      whatsapp: form.whatsapp,
       ...(form.password ? { password: form.password } : {}),
     });
     setSaving(false);
@@ -514,6 +536,16 @@ function EditMemberModal({ user, onClose }) {
         </div>
 
         <div>
+          <label className="label">WhatsApp</label>
+          <input
+            value={form.whatsapp}
+            onChange={(e) => setForm({ ...form, whatsapp: e.target.value })}
+            placeholder="Ej: 3415551234"
+            className="input"
+          />
+        </div>
+
+        <div>
           <label className="label">Restablecer contraseña</label>
           <input
             type="text"
@@ -542,11 +574,35 @@ function EditMemberModal({ user, onClose }) {
 // ── Pestaña: socios ──────────────────────────────────────────────────────────
 
 function UsersTab({ onSelectUser, onSelectProgress }) {
-  const { users, deleteUser, adminToggleMonthly, adminTogglePro, getCurrentMonth } = useApp();
+  const { users, deleteUser, adminToggleMonthly, adminTogglePro, getCurrentMonth, reload } =
+    useApp();
+  const confirm = useConfirm();
   const [search, setSearch] = useState("");
   const [showNewMember, setShowNewMember] = useState(false);
   const [editingMember, setEditingMember] = useState(null);
+  const [inactive, setInactive] = useState(null);
   const currentMonth = getCurrentMonth();
+  const toast = useToast();
+
+  const loadInactive = useCallback(async () => {
+    try {
+      const { users: all } = await api.listUsersWithInactive();
+      setInactive(all.filter((u) => !u.active));
+    } catch (err) {
+      toast.error(err.message);
+    }
+  }, [toast]);
+
+  async function reactivate(user) {
+    try {
+      await api.reactivateUser(user.id);
+      toast.success(`${user.name} vuelve a estar activo.`);
+      await reload();
+      await loadInactive();
+    } catch (err) {
+      toast.error(err.message);
+    }
+  }
 
   const filtered = users.filter(
     (u) =>
@@ -566,6 +622,8 @@ function UsersTab({ onSelectUser, onSelectProgress }) {
           Nuevo socio
         </button>
       </div>
+
+      <PasswordRequests />
 
       {showNewMember && <NewMemberModal onClose={() => setShowNewMember(false)} />}
       {editingMember && (
@@ -626,8 +684,15 @@ function UsersTab({ onSelectUser, onSelectProgress }) {
                       <ClipboardList className="w-4 h-4" />
                     </button>
                     <button
-                      onClick={() => {
-                        if (confirm(`¿Eliminar al socio "${user.name}"?`)) deleteUser(user.id);
+                      onClick={async () => {
+                        const yes = await confirm({
+                          title: `¿Dar de baja a ${user.name}?`,
+                          message:
+                            "Deja de poder iniciar sesión y sale del padrón, pero su historial de pagos se conserva. Podés reactivarlo cuando quieras.",
+                          confirmLabel: "Dar de baja",
+                          danger: true,
+                        });
+                        if (yes) deleteUser(user.id);
                       }}
                       className="btn-icon-danger"
                       title="Eliminar socio"
@@ -670,6 +735,49 @@ function UsersTab({ onSelectUser, onSelectProgress }) {
           })}
         </div>
       )}
+
+      <div className="pt-2 border-t border-line">
+        {inactive === null ? (
+          <button onClick={loadInactive} className="btn-ghost btn-sm -ml-3">
+            <RotateCcw className="w-3.5 h-3.5" />
+            Ver socios dados de baja
+          </button>
+        ) : (
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <h4 className="text-sm font-semibold text-ink">
+                Socios dados de baja ({inactive.length})
+              </h4>
+              <button onClick={() => setInactive(null)} className="btn-ghost btn-sm">
+                Ocultar
+              </button>
+            </div>
+            {inactive.length === 0 ? (
+              <p className="text-sm text-ink-muted py-2">No hay socios dados de baja.</p>
+            ) : (
+              inactive.map((user) => (
+                <div key={user.id} className="card p-3 flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="avatar w-9 h-9 text-xs bg-sunken text-ink-muted">
+                      {user.avatar}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-ink-soft text-sm truncate">{user.name}</p>
+                      <p className="text-ink-muted text-xs">
+                        Baja del {user.deactivatedAt} · su historial se conserva
+                      </p>
+                    </div>
+                  </div>
+                  <button onClick={() => reactivate(user)} className="btn-secondary btn-sm shrink-0">
+                    <RotateCcw className="w-3.5 h-3.5" />
+                    Reactivar
+                  </button>
+                </div>
+              ))
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -687,6 +795,7 @@ function CustomPlanEditor({ user, onBack }) {
     deleteDayFromCustomPlan,
     users,
   } = useApp();
+  const confirm = useConfirm();
 
   const freshUser = users.find((u) => u.id === user.id) || user;
   const customPlan = freshUser.customPlan;
@@ -760,10 +869,14 @@ function CustomPlanEditor({ user, onBack }) {
         </div>
         {customPlan !== null && (
           <button
-            onClick={() => {
-              if (confirm(`¿Eliminar el plan personalizado de ${freshUser.name}?`)) {
-                removeCustomPlan(freshUser.id);
-              }
+            onClick={async () => {
+              const yes = await confirm({
+                title: "¿Eliminar el plan personalizado?",
+                message: `${freshUser.name} va a volver a ver el plan compartido que le corresponda.`,
+                confirmLabel: "Eliminar plan",
+                danger: true,
+              });
+              if (yes) removeCustomPlan(freshUser.id);
             }}
             className="btn-secondary btn-sm text-danger border-danger-line hover:bg-danger-soft shrink-0"
           >
@@ -804,9 +917,14 @@ function CustomPlanEditor({ user, onBack }) {
                 day={day}
                 expanded={expandedDay === dayNum}
                 onToggle={() => setExpandedDay(expandedDay === dayNum ? null : dayNum)}
-                onDelete={() => {
-                  if (confirm(`¿Eliminar el día ${dayNum}?`))
-                    deleteDayFromCustomPlan(freshUser.id, dayNum);
+                onDelete={async () => {
+                  const yes = await confirm({
+                    title: `¿Eliminar el día ${dayNum}?`,
+                    message: "Se borran también sus ejercicios.",
+                    confirmLabel: "Eliminar día",
+                    danger: true,
+                  });
+                  if (yes) deleteDayFromCustomPlan(freshUser.id, dayNum);
                 }}
               >
                 {day.exercises.length === 0 && (
@@ -836,9 +954,13 @@ function CustomPlanEditor({ user, onBack }) {
                         setEditingExercise({ dayNum, id: ex.id });
                         setEditForm({ ...ex });
                       }}
-                      onDelete={() => {
-                        if (confirm(`¿Eliminar "${ex.name}"?`))
-                          deleteExerciseFromCustomPlan(freshUser.id, dayNum, ex.id);
+                      onDelete={async () => {
+                        const yes = await confirm({
+                          title: `¿Eliminar "${ex.name}"?`,
+                          confirmLabel: "Eliminar",
+                          danger: true,
+                        });
+                        if (yes) deleteExerciseFromCustomPlan(freshUser.id, dayNum, ex.id);
                       }}
                     />
                   )
@@ -899,6 +1021,7 @@ function PlansTab() {
     deleteDayFromPlan,
     createPlan,
   } = useApp();
+  const confirm = useConfirm();
 
   const planKeys = Object.keys(plans)
     .map(Number)
@@ -1048,8 +1171,15 @@ function PlansTab() {
                     </span>
                   </button>
                   <button
-                    onClick={() => {
-                      if (confirm(`¿Eliminar el plan de ${planDays} días?`)) deletePlan(planDays);
+                    onClick={async () => {
+                      const yes = await confirm({
+                        title: `¿Eliminar el plan de ${planDays} días?`,
+                        message:
+                          "Los socios que lo tengan asignado quedan sin plan hasta que elijan otro.",
+                        confirmLabel: "Eliminar plan",
+                        danger: true,
+                      });
+                      if (yes) deletePlan(planDays);
                     }}
                     className="btn-icon-danger shrink-0"
                     title="Eliminar plan"
@@ -1071,9 +1201,14 @@ function PlansTab() {
                           day={day}
                           expanded={expandedDay === key}
                           onToggle={() => setExpandedDay(expandedDay === key ? null : key)}
-                          onDelete={() => {
-                            if (confirm(`¿Eliminar el día ${dayNum}?`))
-                              deleteDayFromPlan(planDays, dayNum);
+                          onDelete={async () => {
+                            const yes = await confirm({
+                              title: `¿Eliminar el día ${dayNum}?`,
+                              message: "Se borran también sus ejercicios.",
+                              confirmLabel: "Eliminar día",
+                              danger: true,
+                            });
+                            if (yes) deleteDayFromPlan(planDays, dayNum);
                           }}
                         >
                           {day.exercises.length === 0 && (
@@ -1105,9 +1240,13 @@ function PlansTab() {
                                   setEditingExercise({ planDays, dayNum, id: ex.id });
                                   setEditForm({ ...ex });
                                 }}
-                                onDelete={() => {
-                                  if (confirm(`¿Eliminar "${ex.name}"?`))
-                                    deleteExercise(planDays, dayNum, ex.id);
+                                onDelete={async () => {
+                                  const yes = await confirm({
+                                    title: `¿Eliminar "${ex.name}"?`,
+                                    confirmLabel: "Eliminar",
+                                    danger: true,
+                                  });
+                                  if (yes) deleteExercise(planDays, dayNum, ex.id);
                                 }}
                               />
                             )
@@ -1252,6 +1391,10 @@ function BillingTab() {
             ))}
           </div>
         )}
+      </div>
+
+      <div className="pt-2 border-t border-line">
+        <RemindersPanel />
       </div>
 
       {summary?.byMonth?.length > 1 && (
@@ -1426,10 +1569,22 @@ export default function AdminPanel() {
               onClick={() => setActiveTab("billing")}
             />
             <TabButton
+              active={activeTab === "attendance"}
+              icon={UserCheck}
+              label="Asistencia"
+              onClick={() => setActiveTab("attendance")}
+            />
+            <TabButton
               active={activeTab === "plans"}
               icon={ClipboardList}
               label="Planes"
               onClick={() => setActiveTab("plans")}
+            />
+            <TabButton
+              active={activeTab === "audit"}
+              icon={ShieldCheck}
+              label="Datos y actividad"
+              onClick={() => setActiveTab("audit")}
             />
             <TabButton
               active={activeTab === "settings"}
@@ -1455,6 +1610,10 @@ export default function AdminPanel() {
             />
           ) : activeTab === "billing" ? (
             <BillingTab />
+          ) : activeTab === "attendance" ? (
+            <AttendanceTab />
+          ) : activeTab === "audit" ? (
+            <AuditTab />
           ) : activeTab === "settings" ? (
             <SettingsTab />
           ) : (

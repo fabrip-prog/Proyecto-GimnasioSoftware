@@ -2,6 +2,7 @@ import { Router } from "express";
 import { db } from "../db.js";
 import { authenticate, requireOwner } from "../auth.js";
 import { serializeGym } from "../serialize.js";
+import * as audit from "../audit.js";
 
 const router = Router();
 router.use(authenticate);
@@ -38,6 +39,7 @@ router.patch("/", requireOwner, (req, res) => {
   if (updates.length > 0) {
     values.push(req.gymId);
     db.prepare(`UPDATE gyms SET ${updates.join(", ")} WHERE id = ?`).run(...values);
+    audit.record(req.user, "gimnasio.configuracion", { detail: updates.join(", ") });
   }
 
   res.json({ gym: serializeGym(db.prepare("SELECT * FROM gyms WHERE id = ?").get(req.gymId)) });

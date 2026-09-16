@@ -1,4 +1,6 @@
 import { AppProvider, useApp } from "./context/AppContext";
+import { ToastProvider } from "./components/Toasts";
+import { ConfirmProvider } from "./components/Dialog";
 import LoginPage from "./components/LoginPage";
 import Dashboard from "./components/Dashboard";
 import AdminPanel from "./components/AdminPanel";
@@ -26,9 +28,15 @@ function AppRouter() {
 }
 
 export default function App() {
+  // ToastProvider envuelve a AppProvider porque el contexto avisa los errores
+  // de la API con carteles.
   return (
-    <AppProvider>
-      <AppRouter />
-    </AppProvider>
+    <ToastProvider>
+      <AppProvider>
+        <ConfirmProvider>
+          <AppRouter />
+        </ConfirmProvider>
+      </AppProvider>
+    </ToastProvider>
   );
 }

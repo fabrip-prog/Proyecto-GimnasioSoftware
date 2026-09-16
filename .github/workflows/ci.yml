@@ -1,0 +1,31 @@
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+jobs:
+  verificar:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          # node:sqlite viene incluido desde la 22.5; se usa la 24 por ser la
+          # misma que corre en desarrollo.
+          node-version: "24"
+
+      - name: Instalar dependencias
+        run: npm run install:all
+
+      - name: Tests de la API
+        run: npm test
+
+      - name: Lint del frontend
+        run: npm run lint
+
+      - name: Compilar el frontend
+        run: npm run build
