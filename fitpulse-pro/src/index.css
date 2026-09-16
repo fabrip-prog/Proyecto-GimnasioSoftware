@@ -1,1 +1,227 @@
 @import "tailwindcss";
+
+/* ───────────────────────────────────────────────────────────────────────────
+   Sistema de diseño KineFix
+   Paleta clara y sobria. Cambiar un color acá lo cambia en toda la aplicación.
+
+   Nota: Tailwind 4 sólo permite @apply con utilidades reales, no con otras
+   clases de este archivo, así que cada clase se escribe completa.
+   ─────────────────────────────────────────────────────────────────────────── */
+
+@theme {
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, sans-serif;
+
+  /* Superficies */
+  --color-canvas: #f7f8fa;
+  --color-surface: #ffffff;
+  --color-sunken: #f2f4f7;
+
+  /* Bordes */
+  --color-line: #e4e7ec;
+  --color-line-strong: #d0d5dd;
+
+  /* Texto */
+  --color-ink: #101828;
+  --color-ink-soft: #475467;
+  --color-ink-muted: #98a2b3;
+
+  /* Acento principal */
+  --color-brand: #155eef;
+  --color-brand-dark: #0f4bc4;
+  --color-brand-soft: #eff4ff;
+  --color-brand-line: #b2ccff;
+
+  /* Estados */
+  --color-ok: #067647;
+  --color-ok-soft: #ecfdf3;
+  --color-ok-line: #abefc6;
+
+  --color-warn: #b54708;
+  --color-warn-soft: #fffaeb;
+  --color-warn-line: #fedf89;
+
+  --color-danger: #b42318;
+  --color-danger-dark: #912018;
+  --color-danger-soft: #fef3f2;
+  --color-danger-line: #fecdca;
+
+  /* Suscripción Pro */
+  --color-pro: #6941c6;
+  --color-pro-soft: #f4f3ff;
+  --color-pro-line: #d9d6fe;
+}
+
+@layer base {
+  body {
+    @apply bg-canvas text-ink font-sans antialiased;
+  }
+
+  /* Que el foco por teclado se vea siempre, para accesibilidad. */
+  :focus-visible {
+    @apply outline-2 outline-offset-2 outline-brand;
+  }
+}
+
+@layer components {
+  /* ── Contenedores ─────────────────────────────────────────────────────── */
+
+  .card {
+    @apply bg-surface border border-line rounded-xl;
+  }
+
+  .card-interactive {
+    @apply bg-surface border border-line rounded-xl transition-colors hover:border-line-strong;
+  }
+
+  /* ── Botones ──────────────────────────────────────────────────────────── */
+
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg
+           text-sm font-medium transition-colors cursor-pointer
+           disabled:opacity-50 disabled:cursor-not-allowed
+           bg-brand text-white hover:bg-brand-dark;
+  }
+
+  .btn-secondary {
+    @apply inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg
+           text-sm font-medium transition-colors cursor-pointer
+           disabled:opacity-50 disabled:cursor-not-allowed
+           bg-surface text-ink border border-line-strong hover:bg-sunken;
+  }
+
+  .btn-ghost {
+    @apply inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg
+           text-sm font-medium transition-colors cursor-pointer
+           disabled:opacity-50 disabled:cursor-not-allowed
+           text-ink-soft hover:text-ink hover:bg-sunken;
+  }
+
+  .btn-danger {
+    @apply inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg
+           text-sm font-medium transition-colors cursor-pointer
+           disabled:opacity-50 disabled:cursor-not-allowed
+           bg-danger text-white hover:bg-danger-dark;
+  }
+
+  .btn-sm {
+    @apply px-3 py-1.5 text-xs gap-1.5;
+  }
+
+  /* Botón de sólo ícono, para acciones en filas de listado. */
+  .btn-icon {
+    @apply p-2 rounded-lg text-ink-muted transition-colors cursor-pointer
+           hover:text-ink hover:bg-sunken;
+  }
+
+  .btn-icon-danger {
+    @apply p-2 rounded-lg text-ink-muted transition-colors cursor-pointer
+           hover:text-danger hover:bg-danger-soft;
+  }
+
+  /* ── Formularios ──────────────────────────────────────────────────────── */
+
+  .label {
+    @apply block text-sm font-medium text-ink-soft mb-1.5;
+  }
+
+  .input {
+    @apply w-full px-3.5 py-2.5 bg-surface border border-line-strong rounded-lg
+           text-sm text-ink placeholder-ink-muted transition-colors
+           focus:outline-none focus:border-brand focus:ring-4 focus:ring-brand-soft;
+  }
+
+  .hint {
+    @apply text-xs text-ink-muted mt-1.5;
+  }
+
+  /* ── Etiquetas de estado ──────────────────────────────────────────────── */
+
+  .chip-ok {
+    @apply inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs
+           font-medium border bg-ok-soft text-ok border-ok-line;
+  }
+
+  .chip-warn {
+    @apply inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs
+           font-medium border bg-warn-soft text-warn border-warn-line;
+  }
+
+  .chip-danger {
+    @apply inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs
+           font-medium border bg-danger-soft text-danger border-danger-line;
+  }
+
+  .chip-pro {
+    @apply inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs
+           font-medium border bg-pro-soft text-pro border-pro-line;
+  }
+
+  .chip-neutral {
+    @apply inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs
+           font-medium border bg-sunken text-ink-soft border-line;
+  }
+
+  .chip-button {
+    @apply cursor-pointer transition-opacity hover:opacity-75;
+  }
+
+  /* ── Navegación por pestañas ──────────────────────────────────────────── */
+
+  .tab {
+    @apply inline-flex items-center gap-2 px-3.5 py-2 rounded-lg text-sm
+           font-medium transition-colors cursor-pointer
+           text-ink-soft hover:text-ink hover:bg-sunken;
+  }
+
+  .tab-active {
+    @apply bg-brand-soft text-brand hover:bg-brand-soft hover:text-brand;
+  }
+
+  /* ── Mensajes ─────────────────────────────────────────────────────────── */
+
+  .alert-danger {
+    @apply flex items-start gap-2.5 px-3.5 py-3 rounded-lg text-sm border
+           bg-danger-soft text-danger border-danger-line;
+  }
+
+  .alert-warn {
+    @apply flex items-start gap-2.5 px-3.5 py-3 rounded-lg text-sm border
+           bg-warn-soft text-warn border-warn-line;
+  }
+
+  .alert-ok {
+    @apply flex items-start gap-2.5 px-3.5 py-3 rounded-lg text-sm border
+           bg-ok-soft text-ok border-ok-line;
+  }
+
+  /* ── Diálogos ─────────────────────────────────────────────────────────── */
+
+  .modal-backdrop {
+    @apply fixed inset-0 z-50 flex items-center justify-center p-4
+           bg-ink/40 overflow-y-auto;
+  }
+
+  .modal-panel {
+    @apply w-full bg-surface border border-line rounded-xl shadow-xl p-6 my-auto;
+  }
+
+  /* ── Varios ───────────────────────────────────────────────────────────── */
+
+  .avatar {
+    @apply flex items-center justify-center rounded-full bg-brand-soft
+           text-brand font-semibold shrink-0;
+  }
+
+  .app-header {
+    @apply sticky top-0 z-30 bg-surface border-b border-line;
+  }
+
+  .section-title {
+    @apply text-base font-semibold text-ink;
+  }
+
+  .empty-state {
+    @apply text-center py-12 text-sm text-ink-muted;
+  }
+}

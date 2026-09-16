@@ -8,13 +8,13 @@ function AppRouter() {
 
   if (booting) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#0a0f1a]">
+      <div className="min-h-screen flex items-center justify-center">
         <div className="flex flex-col items-center gap-3">
-          <svg className="animate-spin w-8 h-8 text-emerald-400" viewBox="0 0 24 24" fill="none">
+          <svg className="animate-spin w-8 h-8 text-brand" viewBox="0 0 24 24" fill="none">
             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
           </svg>
-          <p className="text-slate-400 text-sm">Cargando tu gimnasio…</p>
+          <p className="text-ink-soft text-sm">Cargando tu gimnasio…</p>
         </div>
       </div>
     );

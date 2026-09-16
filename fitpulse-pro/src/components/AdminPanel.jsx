@@ -1,29 +1,29 @@
 import { useEffect, useState } from "react";
 import {
-  LogOut,
-  Shield,
-  Users,
-  ClipboardList,
-  Dumbbell,
-  Plus,
-  Trash2,
-  Edit3,
-  Save,
-  X,
+  AlertCircle,
+  ArrowLeft,
+  Calendar,
+  CheckCircle2,
   ChevronDown,
   ChevronRight,
-  Calendar,
+  ClipboardList,
+  Crown,
+  Dumbbell,
+  Edit3,
+  LogOut,
+  Plus,
+  Save,
+  Search,
+  Settings,
+  Trash2,
+  TrendingUp,
+  UserCog,
   UserMinus,
   UserPlus,
-  Search,
-  Crown,
-  CheckCircle2,
-  XCircle,
-  UserCog,
-  ArrowLeft,
-  Settings,
+  Users,
   Wallet,
-  TrendingUp,
+  X,
+  XCircle,
 } from "lucide-react";
 import { useApp } from "../context/AppContext";
 import { api } from "../api/client";
@@ -35,78 +35,65 @@ const money = (amount, currency = "ARS") =>
     maximumFractionDigits: 0,
   }).format(amount ?? 0);
 
-// ── Shared ───────────────────────────────────────────────────────────────────
+const emptyExForm = {
+  name: "",
+  muscle: "",
+  sets: 3,
+  reps: "10",
+  rest: "60s",
+  instructions: "",
+  mediaUrl: "",
+};
+
+// ── Piezas compartidas ───────────────────────────────────────────────────────
 
 function TabButton({ active, icon: Icon, label, onClick }) {
   return (
-    <button
-      onClick={onClick}
-      className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all ${
-        active
-          ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/30"
-          : "text-slate-400 hover:text-white hover:bg-slate-800/50 border border-transparent"
-      }`}
-    >
+    <button onClick={onClick} className={`tab ${active ? "tab-active" : ""}`}>
       <Icon className="w-4 h-4" />
       {label}
     </button>
   );
 }
 
-function ExerciseForm({ form, setForm, onSubmit, onCancel, accentColor = "cyan" }) {
-  const colors = {
-    cyan: {
-      bg: "bg-cyan-500/5",
-      border: "border-cyan-500/20",
-      text: "text-cyan-400",
-      btn: "bg-cyan-500 hover:bg-cyan-600",
-      ring: "focus:ring-cyan-500/40",
-    },
-    emerald: {
-      bg: "bg-emerald-500/5",
-      border: "border-emerald-500/20",
-      text: "text-emerald-400",
-      btn: "bg-emerald-500 hover:bg-emerald-600",
-      ring: "focus:ring-emerald-500/40",
-    },
-  }[accentColor];
-
+/** Formulario de ejercicio, usado tanto para alta como para edición. */
+function ExerciseEditor({ form, setForm, onSubmit, onCancel, submitLabel = "Agregar" }) {
+  const small = "input py-2 text-sm";
   return (
-    <div className={`p-3 ${colors.bg} border ${colors.border} rounded-xl space-y-2`}>
-      <p className={`text-xs font-medium ${colors.text}`}>Nuevo ejercicio</p>
-      <div className="grid grid-cols-2 gap-2">
+    <div className="bg-sunken border border-line rounded-lg p-3 space-y-2">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
         <input
           value={form.name}
           onChange={(e) => setForm({ ...form, name: e.target.value })}
           placeholder="Nombre del ejercicio"
-          className={`px-2.5 py-1.5 bg-slate-800 border border-slate-600/50 rounded-lg text-white text-sm focus:outline-none focus:ring-1 ${colors.ring}`}
+          className={small}
         />
         <input
           value={form.muscle}
           onChange={(e) => setForm({ ...form, muscle: e.target.value })}
           placeholder="Grupo muscular"
-          className={`px-2.5 py-1.5 bg-slate-800 border border-slate-600/50 rounded-lg text-white text-sm focus:outline-none focus:ring-1 ${colors.ring}`}
+          className={small}
         />
       </div>
       <div className="grid grid-cols-3 gap-2">
         <input
           type="number"
           value={form.sets}
-          onChange={(e) => setForm({ ...form, sets: e.target.value })}
+          onChange={(e) => setForm({ ...form, sets: Number(e.target.value) })}
           placeholder="Series"
-          className={`px-2.5 py-1.5 bg-slate-800 border border-slate-600/50 rounded-lg text-white text-sm focus:outline-none focus:ring-1 ${colors.ring}`}
+          className={small}
         />
         <input
           value={form.reps}
           onChange={(e) => setForm({ ...form, reps: e.target.value })}
           placeholder="Reps"
-          className={`px-2.5 py-1.5 bg-slate-800 border border-slate-600/50 rounded-lg text-white text-sm focus:outline-none focus:ring-1 ${colors.ring}`}
+          className={small}
         />
         <input
           value={form.rest}
           onChange={(e) => setForm({ ...form, rest: e.target.value })}
           placeholder="Descanso"
-          className={`px-2.5 py-1.5 bg-slate-800 border border-slate-600/50 rounded-lg text-white text-sm focus:outline-none focus:ring-1 ${colors.ring}`}
+          className={small}
         />
       </div>
       <textarea
@@ -114,66 +101,120 @@ function ExerciseForm({ form, setForm, onSubmit, onCancel, accentColor = "cyan" 
         onChange={(e) => setForm({ ...form, instructions: e.target.value })}
         placeholder="Instrucciones de ejecución"
         rows={2}
-        className={`w-full px-2.5 py-1.5 bg-slate-800 border border-slate-600/50 rounded-lg text-white text-sm focus:outline-none focus:ring-1 ${colors.ring} resize-none`}
+        className={`${small} resize-none`}
       />
       <input
         value={form.mediaUrl || ""}
         onChange={(e) => setForm({ ...form, mediaUrl: e.target.value })}
-        placeholder="URL de Foto/Video/GIF"
-        className={`w-full px-2.5 py-1.5 bg-slate-800 border border-slate-600/50 rounded-lg text-white text-sm focus:outline-none focus:ring-1 ${colors.ring}`}
+        placeholder="URL de foto, video o GIF (opcional)"
+        className={small}
       />
-      <div className="flex gap-2 justify-end">
-        <button onClick={onCancel} className="px-3 py-1.5 text-slate-400 hover:text-white text-xs rounded-lg transition-colors">
+      <div className="flex gap-2 justify-end pt-1">
+        <button onClick={onCancel} className="btn-ghost btn-sm">
           Cancelar
         </button>
-        <button
-          onClick={onSubmit}
-          disabled={!form.name.trim()}
-          className={`flex items-center gap-1 px-3 py-1.5 ${colors.btn} text-white text-xs font-medium rounded-lg disabled:opacity-50 transition-colors`}
-        >
-          <Plus className="w-3 h-3" />
-          Agregar
+        <button onClick={onSubmit} disabled={!form.name?.trim()} className="btn-primary btn-sm">
+          <Save className="w-3.5 h-3.5" />
+          {submitLabel}
         </button>
       </div>
     </div>
   );
 }
 
-function EditExerciseForm({ form, setForm, onSave, onCancel }) {
+function ExerciseRow({ exercise, onEdit, onDelete }) {
   return (
-    <div className="p-3 bg-emerald-500/5 border border-emerald-500/20 rounded-xl space-y-2">
-      <div className="grid grid-cols-2 gap-2">
-        <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Nombre"
-          className="px-2.5 py-1.5 bg-slate-800 border border-slate-600/50 rounded-lg text-white text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500/40" />
-        <input value={form.muscle} onChange={(e) => setForm({ ...form, muscle: e.target.value })} placeholder="Músculo"
-          className="px-2.5 py-1.5 bg-slate-800 border border-slate-600/50 rounded-lg text-white text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500/40" />
+    <div className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-sunken transition-colors">
+      <Dumbbell className="w-4 h-4 text-ink-muted shrink-0" />
+      <div className="flex-1 min-w-0">
+        <p className="text-sm text-ink truncate">{exercise.name}</p>
+        <p className="text-xs text-ink-muted">
+          {exercise.muscle} · {exercise.sets}×{exercise.reps} · {exercise.rest}
+        </p>
       </div>
-      <div className="grid grid-cols-3 gap-2">
-        <input type="number" value={form.sets} onChange={(e) => setForm({ ...form, sets: Number(e.target.value) })} placeholder="Series"
-          className="px-2.5 py-1.5 bg-slate-800 border border-slate-600/50 rounded-lg text-white text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500/40" />
-        <input value={form.reps} onChange={(e) => setForm({ ...form, reps: e.target.value })} placeholder="Reps"
-          className="px-2.5 py-1.5 bg-slate-800 border border-slate-600/50 rounded-lg text-white text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500/40" />
-        <input value={form.rest} onChange={(e) => setForm({ ...form, rest: e.target.value })} placeholder="Descanso"
-          className="px-2.5 py-1.5 bg-slate-800 border border-slate-600/50 rounded-lg text-white text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500/40" />
-      </div>
-      <textarea value={form.instructions} onChange={(e) => setForm({ ...form, instructions: e.target.value })} placeholder="Instrucciones" rows={2}
-        className="w-full px-2.5 py-1.5 bg-slate-800 border border-slate-600/50 rounded-lg text-white text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500/40 resize-none" />
-      <input value={form.mediaUrl || ""} onChange={(e) => setForm({ ...form, mediaUrl: e.target.value })} placeholder="URL de Foto/Video/GIF"
-        className="w-full px-2.5 py-1.5 bg-slate-800 border border-slate-600/50 rounded-lg text-white text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500/40" />
-      <div className="flex gap-2 justify-end">
-        <button onClick={onCancel} className="px-3 py-1.5 text-slate-400 hover:text-white text-xs rounded-lg transition-colors">Cancelar</button>
-        <button onClick={onSave} className="flex items-center gap-1 px-3 py-1.5 bg-emerald-500 text-white text-xs font-medium rounded-lg hover:bg-emerald-600 transition-colors">
-          <Save className="w-3 h-3" />Guardar
+      <div className="flex gap-0.5 shrink-0">
+        <button onClick={onEdit} className="btn-icon" title="Editar ejercicio">
+          <Edit3 className="w-3.5 h-3.5" />
+        </button>
+        <button onClick={onDelete} className="btn-icon-danger" title="Eliminar ejercicio">
+          <Trash2 className="w-3.5 h-3.5" />
         </button>
       </div>
     </div>
   );
 }
 
-const emptyExForm = { name: "", muscle: "", sets: 3, reps: "10", rest: "60s", instructions: "", mediaUrl: "" };
+function DayForm({ title, focus, setTitle, setFocus, onSubmit, onCancel }) {
+  return (
+    <div className="bg-sunken border border-line rounded-lg p-3 space-y-2">
+      <p className="text-xs font-medium text-ink-soft">Nuevo día de entrenamiento</p>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+        <input
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          placeholder="Título (ej: Empuje)"
+          className="input py-2 text-sm"
+        />
+        <input
+          value={focus}
+          onChange={(e) => setFocus(e.target.value)}
+          placeholder="Enfoque (ej: Pecho y tríceps)"
+          className="input py-2 text-sm"
+        />
+      </div>
+      <div className="flex gap-2 justify-end">
+        <button onClick={onCancel} className="btn-ghost btn-sm">
+          Cancelar
+        </button>
+        <button onClick={onSubmit} disabled={!title.trim()} className="btn-primary btn-sm">
+          <Plus className="w-3.5 h-3.5" />
+          Agregar día
+        </button>
+      </div>
+    </div>
+  );
+}
 
+function DashedButton({ onClick, label }) {
+  return (
+    <button
+      onClick={onClick}
+      className="w-full flex items-center justify-center gap-1.5 py-2.5 text-xs font-medium text-ink-soft border border-dashed border-line-strong rounded-lg hover:text-brand hover:border-brand hover:bg-brand-soft transition-colors cursor-pointer"
+    >
+      <Plus className="w-3.5 h-3.5" />
+      {label}
+    </button>
+  );
+}
 
-// ── User Progress View ───────────────────────────────────────────────────────
+/** Acordeón de un día, compartido por el plan personalizado y los compartidos. */
+function DayAccordion({ dayNum, day, expanded, onToggle, onDelete, children }) {
+  return (
+    <div className="card overflow-hidden">
+      <div className="flex items-center justify-between p-3 gap-2">
+        <button onClick={onToggle} className="flex items-center gap-2 flex-1 text-left min-w-0 cursor-pointer">
+          {expanded ? (
+            <ChevronDown className="w-4 h-4 text-ink-soft shrink-0" />
+          ) : (
+            <ChevronRight className="w-4 h-4 text-ink-muted shrink-0" />
+          )}
+          <span className="text-sm font-medium text-ink truncate">
+            Día {dayNum}: {day.title}
+          </span>
+          <span className="text-xs text-ink-muted hidden sm:inline shrink-0">
+            {day.focus} · {day.exercises.length} ej.
+          </span>
+        </button>
+        <button onClick={onDelete} className="btn-icon-danger shrink-0" title="Eliminar día">
+          <Trash2 className="w-4 h-4" />
+        </button>
+      </div>
+      {expanded && <div className="border-t border-line p-3 space-y-1.5">{children}</div>}
+    </div>
+  );
+}
+
+// ── Progreso de un socio ─────────────────────────────────────────────────────
 
 function UserProgressView({ user, onBack }) {
   const [sessions, setSessions] = useState(null);
@@ -211,37 +252,45 @@ function UserProgressView({ user, onBack }) {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <button onClick={onBack} className="p-2 text-slate-400 hover:text-white bg-slate-800/50 hover:bg-slate-700/50 rounded-lg transition-all">
-            <ArrowLeft className="w-5 h-5" />
-          </button>
-          <div>
-            <h2 className="text-xl font-bold text-white flex items-center gap-2">
-              Progreso de {user.name}
-            </h2>
-            {sessions && <p className="text-slate-500 text-xs">{dates.length} sesiones registradas</p>}
-          </div>
+    <div className="space-y-5">
+      <div className="flex items-center gap-3">
+        <button onClick={onBack} className="btn-icon" title="Volver">
+          <ArrowLeft className="w-5 h-5" />
+        </button>
+        <div>
+          <h2 className="section-title">Progreso de {user.name}</h2>
+          {sessions && <p className="text-xs text-ink-muted mt-0.5">{dates.length} sesiones registradas</p>}
         </div>
       </div>
 
-      {error && <p className="px-3 py-2 bg-red-500/10 border border-red-500/30 rounded-lg text-red-400 text-xs">{error}</p>}
+      {error && (
+        <p className="alert-danger">
+          <AlertCircle className="w-4 h-4 shrink-0" />
+          {error}
+        </p>
+      )}
 
       {sessions === null ? (
-        <div className="text-center py-10 text-slate-500 text-sm">Cargando progreso…</div>
+        <div className="empty-state">Cargando progreso…</div>
       ) : dates.length === 0 ? (
-        <div className="text-center py-10 text-slate-500 text-sm">Este usuario aún no ha registrado progresos.</div>
+        <div className="empty-state">Este socio todavía no registró progresos.</div>
       ) : (
-        <div className="space-y-4">
-          {dates.map(date => (
-            <div key={date} className="p-4 bg-slate-800/40 border border-slate-700/30 rounded-xl">
-              <h4 className="text-emerald-400 font-semibold mb-2 capitalize">{formatDate(date)}</h4>
-              <div className="space-y-2">
+        <div className="space-y-3">
+          {dates.map((date) => (
+            <div key={date} className="card p-4">
+              <h4 className="text-sm font-semibold text-ink mb-2 capitalize">{formatDate(date)}</h4>
+              <div className="divide-y divide-line">
                 {sessions[date].map((entry) => (
-                  <div key={entry.exercise_id} className="flex justify-between items-center gap-3 text-sm p-2 bg-slate-900/50 rounded">
-                    <span className="text-slate-300 truncate">{entry.exercise_name || entry.exercise_id}</span>
-                    <span className="text-cyan-400 font-medium shrink-0">{entry.weight} kg × {entry.reps} reps</span>
+                  <div
+                    key={entry.exercise_id}
+                    className="flex justify-between items-center gap-3 text-sm py-2"
+                  >
+                    <span className="text-ink-soft truncate">
+                      {entry.exercise_name || entry.exercise_id}
+                    </span>
+                    <span className="font-medium text-ink shrink-0">
+                      {entry.weight} kg × {entry.reps} reps
+                    </span>
                   </div>
                 ))}
               </div>
@@ -253,9 +302,9 @@ function UserProgressView({ user, onBack }) {
   );
 }
 
-// ── New Member Modal ─────────────────────────────────────────────────────────
+// ── Alta de socio ────────────────────────────────────────────────────────────
 
-const emptyMemberForm = { name: "", username: "", password: "", planDays: "", coach: "", coachTitle: "" };
+const emptyMemberForm = { name: "", username: "", password: "", planDays: "", coach: "" };
 
 function NewMemberModal({ onClose }) {
   const { createUser, availablePlanDays } = useApp();
@@ -277,52 +326,94 @@ function NewMemberModal({ onClose }) {
     else setError(result.error);
   }
 
-  const field = "w-full px-3 py-2 bg-slate-800 border border-slate-600/50 rounded-lg text-white text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/40";
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-      <form onSubmit={handleSubmit} className="w-full max-w-md bg-slate-900 border border-slate-700/50 rounded-2xl shadow-2xl p-6 space-y-4">
+    <div className="modal-backdrop" onClick={onClose}>
+      <form
+        onSubmit={handleSubmit}
+        onClick={(e) => e.stopPropagation()}
+        className="modal-panel max-w-md space-y-4"
+      >
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-bold text-white flex items-center gap-2">
-            <UserPlus className="w-5 h-5 text-emerald-400" />Nuevo socio
+          <h2 className="section-title flex items-center gap-2">
+            <UserPlus className="w-5 h-5 text-brand" />
+            Nuevo socio
           </h2>
-          <button type="button" onClick={onClose} className="p-1 text-slate-400 hover:text-white"><X className="w-4 h-4" /></button>
+          <button type="button" onClick={onClose} className="btn-icon">
+            <X className="w-4 h-4" />
+          </button>
         </div>
 
         <div>
-          <label className="block text-xs text-slate-400 mb-1">Nombre completo</label>
-          <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Ej: Juan Pérez" className={field} />
+          <label className="label">Nombre completo</label>
+          <input
+            value={form.name}
+            onChange={(e) => setForm({ ...form, name: e.target.value })}
+            placeholder="Ej: Juan Pérez"
+            className="input"
+          />
         </div>
 
         <div>
-          <label className="block text-xs text-slate-400 mb-1">Usuario</label>
-          <input value={form.username} onChange={(e) => setForm({ ...form, username: e.target.value.toLowerCase().replace(/\s/g, "") })} placeholder="Ej: juanperez" className={field} />
+          <label className="label">Usuario</label>
+          <input
+            value={form.username}
+            onChange={(e) =>
+              setForm({ ...form, username: e.target.value.toLowerCase().replace(/\s/g, "") })
+            }
+            placeholder="Ej: juanperez"
+            className="input"
+          />
         </div>
 
         <div>
-          <label className="block text-xs text-slate-400 mb-1">Contraseña provisoria</label>
-          <input type="text" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} placeholder="Mínimo 6 caracteres" className={field} />
+          <label className="label">Contraseña provisoria</label>
+          <input
+            type="text"
+            value={form.password}
+            onChange={(e) => setForm({ ...form, password: e.target.value })}
+            placeholder="Mínimo 6 caracteres"
+            className="input"
+          />
+          <p className="hint">El socio puede cambiarla después desde su perfil.</p>
         </div>
 
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="block text-xs text-slate-400 mb-1">Plan</label>
-            <select value={form.planDays} onChange={(e) => setForm({ ...form, planDays: e.target.value })} className={field}>
+            <label className="label">Plan</label>
+            <select
+              value={form.planDays}
+              onChange={(e) => setForm({ ...form, planDays: e.target.value })}
+              className="input"
+            >
               <option value="">Sin plan</option>
-              {availablePlanDays.sort((a, b) => a - b).map((d) => (
-                <option key={d} value={d}>{d} días/semana</option>
-              ))}
+              {availablePlanDays
+                .sort((a, b) => a - b)
+                .map((d) => (
+                  <option key={d} value={d}>
+                    {d} días/semana
+                  </option>
+                ))}
             </select>
           </div>
           <div>
-            <label className="block text-xs text-slate-400 mb-1">Coach</label>
-            <input value={form.coach} onChange={(e) => setForm({ ...form, coach: e.target.value })} placeholder="Opcional" className={field} />
+            <label className="label">Coach</label>
+            <input
+              value={form.coach}
+              onChange={(e) => setForm({ ...form, coach: e.target.value })}
+              placeholder="Opcional"
+              className="input"
+            />
           </div>
         </div>
 
-        {error && <p className="px-3 py-2 bg-red-500/10 border border-red-500/30 rounded-lg text-red-400 text-xs">{error}</p>}
+        {error && (
+          <p className="alert-danger">
+            <AlertCircle className="w-4 h-4 shrink-0" />
+            {error}
+          </p>
+        )}
 
-        <button type="submit" disabled={saving} className="w-full py-2.5 bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 text-white rounded-lg text-sm font-medium transition-colors">
+        <button type="submit" disabled={saving} className="btn-primary w-full">
           {saving ? "Creando…" : "Crear socio"}
         </button>
       </form>
@@ -330,7 +421,7 @@ function NewMemberModal({ onClose }) {
   );
 }
 
-// ── Edit Member Modal ────────────────────────────────────────────────────────
+// ── Edición de socio ─────────────────────────────────────────────────────────
 
 function EditMemberModal({ user, onClose }) {
   const { updateUser, availablePlanDays } = useApp();
@@ -338,7 +429,6 @@ function EditMemberModal({ user, onClose }) {
     name: user.name,
     planDays: user.planDays == null ? "" : String(user.planDays),
     coach: user.coach ?? "",
-    coachTitle: user.coachTitle ?? "",
     password: "",
   });
   const [error, setError] = useState("");
@@ -358,7 +448,6 @@ function EditMemberModal({ user, onClose }) {
       name: form.name,
       planDays: form.planDays === "" ? null : Number(form.planDays),
       coach: form.coach,
-      coachTitle: form.coachTitle,
       ...(form.password ? { password: form.password } : {}),
     });
     setSaving(false);
@@ -367,49 +456,82 @@ function EditMemberModal({ user, onClose }) {
     else setError(result.error);
   }
 
-  const field = "w-full px-3 py-2 bg-slate-800 border border-slate-600/50 rounded-lg text-white text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/40";
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-      <form onSubmit={handleSubmit} className="w-full max-w-md bg-slate-900 border border-slate-700/50 rounded-2xl shadow-2xl p-6 space-y-4">
+    <div className="modal-backdrop" onClick={onClose}>
+      <form
+        onSubmit={handleSubmit}
+        onClick={(e) => e.stopPropagation()}
+        className="modal-panel max-w-md space-y-4"
+      >
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-bold text-white flex items-center gap-2">
-            <Edit3 className="w-5 h-5 text-emerald-400" />Editar socio
+          <h2 className="section-title flex items-center gap-2">
+            <Edit3 className="w-5 h-5 text-brand" />
+            Editar socio
           </h2>
-          <button type="button" onClick={onClose} className="p-1 text-slate-400 hover:text-white"><X className="w-4 h-4" /></button>
+          <button type="button" onClick={onClose} className="btn-icon">
+            <X className="w-4 h-4" />
+          </button>
         </div>
 
-        <p className="text-slate-500 text-xs">@{user.username}</p>
+        <p className="text-xs text-ink-muted -mt-2">@{user.username}</p>
 
         <div>
-          <label className="block text-xs text-slate-400 mb-1">Nombre completo</label>
-          <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className={field} />
+          <label className="label">Nombre completo</label>
+          <input
+            value={form.name}
+            onChange={(e) => setForm({ ...form, name: e.target.value })}
+            className="input"
+          />
         </div>
 
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="block text-xs text-slate-400 mb-1">Plan</label>
-            <select value={form.planDays} onChange={(e) => setForm({ ...form, planDays: e.target.value })} className={field}>
+            <label className="label">Plan</label>
+            <select
+              value={form.planDays}
+              onChange={(e) => setForm({ ...form, planDays: e.target.value })}
+              className="input"
+            >
               <option value="">Sin plan</option>
-              {availablePlanDays.sort((a, b) => a - b).map((d) => (
-                <option key={d} value={d}>{d} días/semana</option>
-              ))}
+              {availablePlanDays
+                .sort((a, b) => a - b)
+                .map((d) => (
+                  <option key={d} value={d}>
+                    {d} días/semana
+                  </option>
+                ))}
             </select>
           </div>
           <div>
-            <label className="block text-xs text-slate-400 mb-1">Coach</label>
-            <input value={form.coach} onChange={(e) => setForm({ ...form, coach: e.target.value })} placeholder="Opcional" className={field} />
+            <label className="label">Coach</label>
+            <input
+              value={form.coach}
+              onChange={(e) => setForm({ ...form, coach: e.target.value })}
+              placeholder="Opcional"
+              className="input"
+            />
           </div>
         </div>
 
         <div>
-          <label className="block text-xs text-slate-400 mb-1">Restablecer contraseña</label>
-          <input type="text" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} placeholder="Dejala vacía para no cambiarla" className={field} />
+          <label className="label">Restablecer contraseña</label>
+          <input
+            type="text"
+            value={form.password}
+            onChange={(e) => setForm({ ...form, password: e.target.value })}
+            placeholder="Dejala vacía para no cambiarla"
+            className="input"
+          />
         </div>
 
-        {error && <p className="px-3 py-2 bg-red-500/10 border border-red-500/30 rounded-lg text-red-400 text-xs">{error}</p>}
+        {error && (
+          <p className="alert-danger">
+            <AlertCircle className="w-4 h-4 shrink-0" />
+            {error}
+          </p>
+        )}
 
-        <button type="submit" disabled={saving} className="w-full py-2.5 bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 text-white rounded-lg text-sm font-medium transition-colors">
+        <button type="submit" disabled={saving} className="btn-primary w-full">
           {saving ? "Guardando…" : "Guardar cambios"}
         </button>
       </form>
@@ -417,7 +539,7 @@ function EditMemberModal({ user, onClose }) {
   );
 }
 
-// ── Users Tab ────────────────────────────────────────────────────────────────
+// ── Pestaña: socios ──────────────────────────────────────────────────────────
 
 function UsersTab({ onSelectUser, onSelectProgress }) {
   const { users, deleteUser, adminToggleMonthly, adminTogglePro, getCurrentMonth } = useApp();
@@ -434,124 +556,113 @@ function UsersTab({ onSelectUser, onSelectProgress }) {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold text-white flex items-center gap-2">
-          <Users className="w-5 h-5 text-emerald-400" />
-          Usuarios Registrados ({users.length})
+      <div className="flex items-center justify-between gap-3">
+        <h3 className="section-title flex items-center gap-2">
+          <Users className="w-5 h-5 text-ink-soft" />
+          Socios ({users.length})
         </h3>
-        <button
-          onClick={() => setShowNewMember(true)}
-          className="flex items-center gap-1.5 px-3 py-2 bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 rounded-xl text-sm font-medium hover:bg-emerald-500/25 transition-all"
-        >
-          <UserPlus className="w-4 h-4" />Nuevo Socio
+        <button onClick={() => setShowNewMember(true)} className="btn-primary btn-sm">
+          <UserPlus className="w-4 h-4" />
+          Nuevo socio
         </button>
       </div>
 
       {showNewMember && <NewMemberModal onClose={() => setShowNewMember(false)} />}
-      {editingMember && <EditMemberModal user={editingMember} onClose={() => setEditingMember(null)} />}
+      {editingMember && (
+        <EditMemberModal user={editingMember} onClose={() => setEditingMember(null)} />
+      )}
 
       <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-ink-muted" />
         <input
           type="text"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Buscar por nombre o usuario..."
-          className="w-full pl-10 pr-4 py-2.5 bg-slate-800/60 border border-slate-700/40 rounded-xl text-white text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/40 transition-all"
+          placeholder="Buscar por nombre o usuario…"
+          className="input pl-10"
         />
       </div>
 
       {filtered.length === 0 ? (
-        <div className="text-center py-10 text-slate-500 text-sm">No se encontraron usuarios.</div>
+        <div className="empty-state">
+          {users.length === 0 ? "Todavía no hay socios cargados." : "No se encontraron socios."}
+        </div>
       ) : (
         <div className="space-y-2">
           {filtered.map((user) => {
             const monthlyOk = user.monthlyPaidMonth === currentMonth;
+            const customDays = user.customPlan ? Object.keys(user.customPlan).length : 0;
+
             return (
-              <div
-                key={user.id}
-                className="p-4 bg-slate-800/40 border border-slate-700/30 rounded-xl hover:border-slate-600/50 transition-all"
-              >
+              <div key={user.id} className="card-interactive p-4">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-cyan-500 flex items-center justify-center text-white font-bold text-sm shrink-0">
-                    {user.avatar}
-                  </div>
+                  <div className="avatar w-10 h-10 text-sm">{user.avatar}</div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-white font-medium text-sm truncate">{user.name}</p>
-                    <p className="text-slate-500 text-xs">
-                      @{user.username} · {user.plan} · Desde {user.startDate}
+                    <p className="text-ink font-medium text-sm truncate">{user.name}</p>
+                    <p className="text-ink-muted text-xs truncate">
+                      @{user.username} · {user.plan} · desde {user.startDate}
                     </p>
                   </div>
-                  <div className="flex items-center gap-1.5 shrink-0">
+                  <div className="flex items-center gap-0.5 shrink-0">
                     <button
                       onClick={() => setEditingMember(user)}
-                      className="p-2 text-slate-500 hover:text-emerald-400 hover:bg-emerald-500/10 rounded-lg transition-all"
+                      className="btn-icon"
                       title="Editar socio / restablecer contraseña"
                     >
                       <Edit3 className="w-4 h-4" />
                     </button>
-                    {/* Custom plan button */}
                     <button
                       onClick={() => onSelectUser(user)}
-                      className="p-2 text-slate-500 hover:text-violet-400 hover:bg-violet-500/10 rounded-lg transition-all"
+                      className="btn-icon"
                       title="Gestionar plan personalizado"
                     >
                       <UserCog className="w-4 h-4" />
                     </button>
                     <button
                       onClick={() => onSelectProgress(user)}
-                      className="p-2 text-slate-500 hover:text-cyan-400 hover:bg-cyan-500/10 rounded-lg transition-all"
-                      title="Ver progreso del usuario"
+                      className="btn-icon"
+                      title="Ver progreso"
                     >
                       <ClipboardList className="w-4 h-4" />
                     </button>
                     <button
-                      onClick={() => { if (confirm(`¿Eliminar al usuario "${user.name}"?`)) deleteUser(user.id); }}
-                      className="p-2 text-slate-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-all"
-                      title="Eliminar usuario"
+                      onClick={() => {
+                        if (confirm(`¿Eliminar al socio "${user.name}"?`)) deleteUser(user.id);
+                      }}
+                      className="btn-icon-danger"
+                      title="Eliminar socio"
                     >
                       <UserMinus className="w-4 h-4" />
                     </button>
                   </div>
                 </div>
 
-                {/* Status badges */}
-                <div className="flex flex-wrap gap-2 mt-3 ml-13">
+                <div className="flex flex-wrap gap-2 mt-3">
                   <button
                     onClick={() => adminToggleMonthly(user.id)}
-                    className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium border transition-all ${
-                      monthlyOk
-                        ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20 hover:bg-emerald-500/20"
-                        : "bg-red-500/10 text-red-400 border-red-500/20 hover:bg-red-500/20"
-                    }`}
-                    title="Click para alternar estado de cuota"
+                    className={`${monthlyOk ? "chip-ok" : "chip-danger"} chip-button`}
+                    title="Cambiar estado de la cuota"
                   >
-                    {monthlyOk ? <CheckCircle2 className="w-3 h-3" /> : <XCircle className="w-3 h-3" />}
-                    Cuota {monthlyOk ? "Pagada" : "Pendiente"}
+                    {monthlyOk ? (
+                      <CheckCircle2 className="w-3 h-3" />
+                    ) : (
+                      <XCircle className="w-3 h-3" />
+                    )}
+                    Cuota {monthlyOk ? "pagada" : "pendiente"}
                   </button>
 
                   <button
                     onClick={() => adminTogglePro(user.id)}
-                    className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium border transition-all ${
-                      user.proActive
-                        ? "bg-violet-500/10 text-violet-400 border-violet-500/20 hover:bg-violet-500/20"
-                        : "bg-slate-700/50 text-slate-500 border-slate-600/20 hover:bg-slate-700/80"
-                    }`}
-                    title="Click para alternar suscripción Pro"
+                    className={`${user.proActive ? "chip-pro" : "chip-neutral"} chip-button`}
+                    title="Activar o desactivar Pro"
                   >
                     <Crown className="w-3 h-3" />
-                    Pro {user.proActive ? "Activa" : "Inactiva"}
+                    Pro {user.proActive ? "activa" : "inactiva"}
                   </button>
 
-                  <span className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium border ${
-                    user.customPlan && Object.keys(user.customPlan).length > 0
-                      ? "bg-amber-500/10 text-amber-400 border-amber-500/20"
-                      : "bg-slate-700/30 text-slate-600 border-slate-700/20"
-                  }`}>
+                  <span className="chip-neutral">
                     <ClipboardList className="w-3 h-3" />
-                    Plan personal: {user.customPlan && Object.keys(user.customPlan).length > 0
-                      ? `${Object.keys(user.customPlan).length} días`
-                      : "No asignado"}
+                    {customDays > 0 ? `Plan personal: ${customDays} días` : "Sin plan personal"}
                   </span>
                 </div>
               </div>
@@ -563,7 +674,7 @@ function UsersTab({ onSelectUser, onSelectProgress }) {
   );
 }
 
-// ── Custom Plan Editor (per user) ────────────────────────────────────────────
+// ── Plan personalizado de un socio ───────────────────────────────────────────
 
 function CustomPlanEditor({ user, onBack }) {
   const {
@@ -577,61 +688,43 @@ function CustomPlanEditor({ user, onBack }) {
     users,
   } = useApp();
 
-  // Get fresh user data
   const freshUser = users.find((u) => u.id === user.id) || user;
   const customPlan = freshUser.customPlan;
 
   const [expandedDay, setExpandedDay] = useState(null);
   const [editingExercise, setEditingExercise] = useState(null);
   const [editForm, setEditForm] = useState({});
-  const [addingDayTitle, setAddingDayTitle] = useState("");
-  const [addingDayFocus, setAddingDayFocus] = useState("");
+  const [dayTitle, setDayTitle] = useState("");
+  const [dayFocus, setDayFocus] = useState("");
   const [showAddDay, setShowAddDay] = useState(false);
   const [addingExerciseTo, setAddingExerciseTo] = useState(null);
   const [newExForm, setNewExForm] = useState({ ...emptyExForm });
 
-  function handleInitPlan() {
-    assignCustomPlan(freshUser.id, {});
-  }
-
-  function handleRemovePlan() {
-    if (confirm(`¿Eliminar el plan personalizado de ${freshUser.name}?`)) {
-      removeCustomPlan(freshUser.id);
-    }
-  }
-
   function handleAddDay() {
-    if (!addingDayTitle.trim()) return;
+    if (!dayTitle.trim()) return;
     const dayNums = customPlan ? Object.keys(customPlan).map(Number) : [];
     const nextDay = dayNums.length > 0 ? Math.max(...dayNums) + 1 : 1;
     addDayToCustomPlan(freshUser.id, nextDay, {
-      title: addingDayTitle.trim(),
-      focus: addingDayFocus.trim() || "General",
+      title: dayTitle.trim(),
+      focus: dayFocus.trim() || "General",
       exercises: [],
     });
-    setAddingDayTitle("");
-    setAddingDayFocus("");
+    setDayTitle("");
+    setDayFocus("");
     setShowAddDay(false);
   }
 
   function handleAddExercise(dayNum) {
     if (!newExForm.name.trim()) return;
     addExerciseToCustomPlan(freshUser.id, dayNum, {
+      ...newExForm,
       name: newExForm.name.trim(),
       muscle: newExForm.muscle.trim() || "General",
       sets: Number(newExForm.sets) || 3,
-      reps: newExForm.reps || "10",
-      rest: newExForm.rest || "60s",
       instructions: newExForm.instructions.trim() || "Sin instrucciones específicas.",
-      mediaUrl: newExForm.mediaUrl ? newExForm.mediaUrl.trim() : "",
     });
     setAddingExerciseTo(null);
     setNewExForm({ ...emptyExForm });
-  }
-
-  function startEdit(dayNum, exercise) {
-    setEditingExercise({ dayNum, id: exercise.id });
-    setEditForm({ ...exercise });
   }
 
   function saveEdit() {
@@ -642,52 +735,60 @@ function CustomPlanEditor({ user, onBack }) {
   }
 
   const dayKeys = customPlan
-    ? Object.keys(customPlan).map(Number).sort((a, b) => a - b)
+    ? Object.keys(customPlan)
+        .map(Number)
+        .sort((a, b) => a - b)
     : [];
 
   return (
     <div className="space-y-4">
-      <button onClick={onBack} className="flex items-center gap-1.5 text-sm text-slate-400 hover:text-white transition-colors">
-        <ArrowLeft className="w-4 h-4" />
-        Volver a usuarios
-      </button>
-
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-cyan-500 flex items-center justify-center text-white font-bold text-sm">
-            {freshUser.avatar}
-          </div>
-          <div>
-            <h3 className="text-lg font-semibold text-white flex items-center gap-2">
-              <Crown className="w-5 h-5 text-violet-400" />
-              Plan Personalizado
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3 min-w-0">
+          <button onClick={onBack} className="btn-icon shrink-0" title="Volver a socios">
+            <ArrowLeft className="w-5 h-5" />
+          </button>
+          <div className="avatar w-10 h-10 text-sm">{freshUser.avatar}</div>
+          <div className="min-w-0">
+            <h3 className="section-title flex items-center gap-2">
+              <Crown className="w-4 h-4 text-pro" />
+              Plan personalizado
             </h3>
-            <p className="text-xs text-slate-500">{freshUser.name} · @{freshUser.username}</p>
+            <p className="text-xs text-ink-muted truncate">
+              {freshUser.name} · @{freshUser.username}
+            </p>
           </div>
         </div>
         {customPlan !== null && (
           <button
-            onClick={handleRemovePlan}
-            className="flex items-center gap-1.5 px-3 py-2 text-red-400 hover:bg-red-500/10 border border-red-500/20 rounded-xl text-xs font-medium transition-all"
+            onClick={() => {
+              if (confirm(`¿Eliminar el plan personalizado de ${freshUser.name}?`)) {
+                removeCustomPlan(freshUser.id);
+              }
+            }}
+            className="btn-secondary btn-sm text-danger border-danger-line hover:bg-danger-soft shrink-0"
           >
-            <Trash2 className="w-3.5 h-3.5" />
-            Eliminar Plan
+            Eliminar plan
           </button>
         )}
       </div>
 
+      {!freshUser.proActive && (
+        <div className="alert-warn">
+          <AlertCircle className="w-4 h-4 shrink-0" />
+          <span>
+            Este socio no tiene la suscripción Pro activa, así que todavía no puede ver su plan
+            personalizado.
+          </span>
+        </div>
+      )}
+
       {customPlan === null ? (
-        <div className="text-center py-12 space-y-4">
-          <ClipboardList className="w-10 h-10 text-slate-600 mx-auto" />
-          <p className="text-slate-400 text-sm">
-            Este usuario no tiene un plan personalizado asignado.
-          </p>
-          <button
-            onClick={handleInitPlan}
-            className="inline-flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white text-sm font-medium rounded-xl hover:from-violet-600 hover:to-fuchsia-600 transition-all shadow-lg shadow-violet-500/20"
-          >
+        <div className="card p-10 text-center space-y-4">
+          <ClipboardList className="w-10 h-10 text-ink-muted mx-auto" />
+          <p className="text-ink-soft text-sm">Este socio no tiene un plan personalizado.</p>
+          <button onClick={() => assignCustomPlan(freshUser.id, {})} className="btn-primary">
             <Plus className="w-4 h-4" />
-            Crear Plan Personalizado
+            Crear plan personalizado
           </button>
         </div>
       ) : (
@@ -695,102 +796,89 @@ function CustomPlanEditor({ user, onBack }) {
           {dayKeys.map((dayNum) => {
             const day = customPlan[dayNum];
             if (!day) return null;
-            const isDayExpanded = expandedDay === dayNum;
 
             return (
-              <div key={dayNum} className="bg-slate-900/40 border border-slate-700/20 rounded-xl overflow-hidden">
-                <div className="flex items-center justify-between p-3">
-                  <button
-                    onClick={() => setExpandedDay(isDayExpanded ? null : dayNum)}
-                    className="flex items-center gap-2 flex-1 text-left"
-                  >
-                    {isDayExpanded ? <ChevronDown className="w-3.5 h-3.5 text-violet-400" /> : <ChevronRight className="w-3.5 h-3.5 text-slate-500" />}
-                    <span className="text-sm font-medium text-white">Día {dayNum}: {day.title}</span>
-                    <span className="text-xs text-slate-500">— {day.focus} · {day.exercises.length} ej.</span>
-                  </button>
-                  <button
-                    onClick={() => { if (confirm(`¿Eliminar Día ${dayNum}?`)) deleteDayFromCustomPlan(freshUser.id, dayNum); }}
-                    className="p-1.5 text-slate-500 hover:text-red-400 rounded transition-all"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-
-                {isDayExpanded && (
-                  <div className="border-t border-slate-700/20 p-3 space-y-2">
-                    {day.exercises.length === 0 && (
-                      <p className="text-xs text-slate-500 text-center py-4">No hay ejercicios en este día.</p>
-                    )}
-                    {day.exercises.map((ex) => {
-                      const isEditing = editingExercise && editingExercise.dayNum === dayNum && editingExercise.id === ex.id;
-                      if (isEditing) {
-                        return <EditExerciseForm key={ex.id} form={editForm} setForm={setEditForm} onSave={saveEdit} onCancel={() => { setEditingExercise(null); setEditForm({}); }} />;
-                      }
-                      return (
-                        <div key={ex.id} className="flex items-center gap-3 p-2.5 bg-slate-800/30 rounded-lg hover:bg-slate-800/50 transition-all">
-                          <Dumbbell className="w-4 h-4 text-violet-500/50 shrink-0" />
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm text-white truncate">{ex.name}</p>
-                            <p className="text-xs text-slate-500">{ex.muscle} · {ex.sets}×{ex.reps} · {ex.rest}</p>
-                          </div>
-                          <div className="flex gap-1 shrink-0">
-                            <button onClick={() => startEdit(dayNum, ex)} className="p-1.5 text-slate-500 hover:text-cyan-400 rounded transition-all"><Edit3 className="w-3.5 h-3.5" /></button>
-                            <button onClick={() => { if (confirm(`¿Eliminar "${ex.name}"?`)) deleteExerciseFromCustomPlan(freshUser.id, dayNum, ex.id); }}
-                              className="p-1.5 text-slate-500 hover:text-red-400 rounded transition-all"><Trash2 className="w-3.5 h-3.5" /></button>
-                          </div>
-                        </div>
-                      );
-                    })}
-
-                    {addingExerciseTo === dayNum ? (
-                      <ExerciseForm
-                        form={newExForm}
-                        setForm={setNewExForm}
-                        onSubmit={() => handleAddExercise(dayNum)}
-                        onCancel={() => { setAddingExerciseTo(null); setNewExForm({ ...emptyExForm }); }}
-                        accentColor="cyan"
-                      />
-                    ) : (
-                      <button
-                        onClick={() => setAddingExerciseTo(dayNum)}
-                        className="w-full flex items-center justify-center gap-1.5 py-2 text-xs text-slate-500 hover:text-cyan-400 border border-dashed border-slate-700/40 hover:border-cyan-500/30 rounded-lg transition-all mt-1"
-                      >
-                        <Plus className="w-3.5 h-3.5" />
-                        Agregar ejercicio
-                      </button>
-                    )}
-                  </div>
+              <DayAccordion
+                key={dayNum}
+                dayNum={dayNum}
+                day={day}
+                expanded={expandedDay === dayNum}
+                onToggle={() => setExpandedDay(expandedDay === dayNum ? null : dayNum)}
+                onDelete={() => {
+                  if (confirm(`¿Eliminar el día ${dayNum}?`))
+                    deleteDayFromCustomPlan(freshUser.id, dayNum);
+                }}
+              >
+                {day.exercises.length === 0 && (
+                  <p className="text-xs text-ink-muted text-center py-3">
+                    No hay ejercicios en este día.
+                  </p>
                 )}
-              </div>
+
+                {day.exercises.map((ex) =>
+                  editingExercise?.dayNum === dayNum && editingExercise?.id === ex.id ? (
+                    <ExerciseEditor
+                      key={ex.id}
+                      form={editForm}
+                      setForm={setEditForm}
+                      onSubmit={saveEdit}
+                      onCancel={() => {
+                        setEditingExercise(null);
+                        setEditForm({});
+                      }}
+                      submitLabel="Guardar"
+                    />
+                  ) : (
+                    <ExerciseRow
+                      key={ex.id}
+                      exercise={ex}
+                      onEdit={() => {
+                        setEditingExercise({ dayNum, id: ex.id });
+                        setEditForm({ ...ex });
+                      }}
+                      onDelete={() => {
+                        if (confirm(`¿Eliminar "${ex.name}"?`))
+                          deleteExerciseFromCustomPlan(freshUser.id, dayNum, ex.id);
+                      }}
+                    />
+                  )
+                )}
+
+                {addingExerciseTo === dayNum ? (
+                  <ExerciseEditor
+                    form={newExForm}
+                    setForm={setNewExForm}
+                    onSubmit={() => handleAddExercise(dayNum)}
+                    onCancel={() => {
+                      setAddingExerciseTo(null);
+                      setNewExForm({ ...emptyExForm });
+                    }}
+                  />
+                ) : (
+                  <DashedButton
+                    onClick={() => setAddingExerciseTo(dayNum)}
+                    label="Agregar ejercicio"
+                  />
+                )}
+              </DayAccordion>
             );
           })}
 
           {showAddDay ? (
-            <div className="p-3 bg-violet-500/5 border border-violet-500/20 rounded-xl space-y-2">
-              <p className="text-xs font-medium text-violet-400">Nuevo día de entrenamiento</p>
-              <div className="grid grid-cols-2 gap-2">
-                <input value={addingDayTitle} onChange={(e) => setAddingDayTitle(e.target.value)} placeholder="Título (ej: Push)"
-                  className="px-2.5 py-1.5 bg-slate-800 border border-slate-600/50 rounded-lg text-white text-sm focus:outline-none focus:ring-1 focus:ring-violet-500/40" />
-                <input value={addingDayFocus} onChange={(e) => setAddingDayFocus(e.target.value)} placeholder="Enfoque (ej: Pecho/Tríceps)"
-                  className="px-2.5 py-1.5 bg-slate-800 border border-slate-600/50 rounded-lg text-white text-sm focus:outline-none focus:ring-1 focus:ring-violet-500/40" />
-              </div>
-              <div className="flex gap-2 justify-end">
-                <button onClick={() => { setShowAddDay(false); setAddingDayTitle(""); setAddingDayFocus(""); }}
-                  className="px-3 py-1.5 text-slate-400 hover:text-white text-xs rounded-lg transition-colors">Cancelar</button>
-                <button onClick={handleAddDay} disabled={!addingDayTitle.trim()}
-                  className="flex items-center gap-1 px-3 py-1.5 bg-violet-500 text-white text-xs font-medium rounded-lg hover:bg-violet-600 disabled:opacity-50 transition-colors">
-                  <Plus className="w-3 h-3" />Agregar Día
-                </button>
-              </div>
-            </div>
+            <DayForm
+              title={dayTitle}
+              focus={dayFocus}
+              setTitle={setDayTitle}
+              setFocus={setDayFocus}
+              onSubmit={handleAddDay}
+              onCancel={() => {
+                setShowAddDay(false);
+                setDayTitle("");
+                setDayFocus("");
+              }}
+            />
           ) : (
-            <button
-              onClick={() => setShowAddDay(true)}
-              className="w-full flex items-center justify-center gap-1.5 py-2.5 text-xs text-slate-500 hover:text-violet-400 border border-dashed border-slate-700/40 hover:border-violet-500/30 rounded-xl transition-all"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              Agregar día al plan
-            </button>
+            <DashedButton onClick={() => setShowAddDay(true)} label="Agregar día al plan" />
           )}
         </div>
       )}
@@ -798,15 +886,24 @@ function CustomPlanEditor({ user, onBack }) {
   );
 }
 
-// ── Plans Tab (shared plans) ─────────────────────────────────────────────────
+// ── Pestaña: planes compartidos ──────────────────────────────────────────────
 
 function PlansTab() {
   const {
-    plans, deletePlan, addExercise, updateExercise, deleteExercise,
-    addDayToPlan, deleteDayFromPlan, createPlan,
+    plans,
+    deletePlan,
+    addExercise,
+    updateExercise,
+    deleteExercise,
+    addDayToPlan,
+    deleteDayFromPlan,
+    createPlan,
   } = useApp();
 
-  const planKeys = Object.keys(plans).map(Number).sort((a, b) => a - b);
+  const planKeys = Object.keys(plans)
+    .map(Number)
+    .sort((a, b) => a - b);
+
   const [expandedPlan, setExpandedPlan] = useState(null);
   const [expandedDay, setExpandedDay] = useState(null);
   const [editingExercise, setEditingExercise] = useState(null);
@@ -820,11 +917,6 @@ function PlansTab() {
   const [newExForm, setNewExForm] = useState({ ...emptyExForm });
   const [planError, setPlanError] = useState("");
 
-  function startEditExercise(planDays, dayNum, exercise) {
-    setEditingExercise({ planDays, dayNum, id: exercise.id });
-    setEditForm({ ...exercise });
-  }
-
   function saveEditExercise() {
     if (!editingExercise) return;
     updateExercise(editingExercise.planDays, editingExercise.dayNum, editingExercise.id, editForm);
@@ -836,7 +928,11 @@ function PlansTab() {
     if (!newDayTitle.trim()) return;
     const dayNums = Object.keys(plans[planDays]).map(Number);
     const nextDay = dayNums.length > 0 ? Math.max(...dayNums) + 1 : 1;
-    addDayToPlan(planDays, nextDay, { title: newDayTitle.trim(), focus: newDayFocus.trim() || "General", exercises: [] });
+    addDayToPlan(planDays, nextDay, {
+      title: newDayTitle.trim(),
+      focus: newDayFocus.trim() || "General",
+      exercises: [],
+    });
     setAddingDayToPlan(null);
     setNewDayTitle("");
     setNewDayFocus("");
@@ -845,10 +941,11 @@ function PlansTab() {
   function handleAddExercise() {
     if (!addingExerciseTo || !newExForm.name.trim()) return;
     addExercise(addingExerciseTo.planDays, addingExerciseTo.dayNum, {
-      name: newExForm.name.trim(), muscle: newExForm.muscle.trim() || "General",
-      sets: Number(newExForm.sets) || 3, reps: newExForm.reps || "10",
-      rest: newExForm.rest || "60s", instructions: newExForm.instructions.trim() || "Sin instrucciones específicas.",
-      mediaUrl: newExForm.mediaUrl ? newExForm.mediaUrl.trim() : "",
+      ...newExForm,
+      name: newExForm.name.trim(),
+      muscle: newExForm.muscle.trim() || "General",
+      sets: Number(newExForm.sets) || 3,
+      instructions: newExForm.instructions.trim() || "Sin instrucciones específicas.",
     });
     setAddingExerciseTo(null);
     setNewExForm({ ...emptyExForm });
@@ -856,142 +953,205 @@ function PlansTab() {
 
   async function handleCreatePlan() {
     const days = parseInt(newPlanDays);
-    if (isNaN(days) || days < 1 || days > 7) return;
+    if (isNaN(days) || days < 1 || days > 7) {
+      setPlanError("La cantidad de días debe estar entre 1 y 7.");
+      return;
+    }
     const result = await createPlan(days, {});
-    if (result.success) { setShowNewPlan(false); setNewPlanDays(""); setExpandedPlan(days); setPlanError(""); }
-    else setPlanError(result.error);
+    if (result.success) {
+      setShowNewPlan(false);
+      setNewPlanDays("");
+      setExpandedPlan(days);
+      setPlanError("");
+    } else {
+      setPlanError(result.error);
+    }
   }
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold text-white flex items-center gap-2">
-          <ClipboardList className="w-5 h-5 text-emerald-400" />
-          Planes Compartidos ({planKeys.length})
+      <div className="flex items-center justify-between gap-3">
+        <h3 className="section-title flex items-center gap-2">
+          <ClipboardList className="w-5 h-5 text-ink-soft" />
+          Planes compartidos ({planKeys.length})
         </h3>
-        <button onClick={() => setShowNewPlan(true)}
-          className="flex items-center gap-1.5 px-3 py-2 bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 rounded-xl text-sm font-medium hover:bg-emerald-500/25 transition-all">
-          <Plus className="w-4 h-4" />Nuevo Plan
+        <button onClick={() => setShowNewPlan(true)} className="btn-primary btn-sm">
+          <Plus className="w-4 h-4" />
+          Nuevo plan
         </button>
       </div>
 
       {showNewPlan && (
-        <div className="p-4 bg-emerald-500/5 border border-emerald-500/20 rounded-xl space-y-3">
-          <p className="text-sm font-medium text-emerald-400">Crear nuevo plan</p>
-          <div className="flex items-center gap-3">
-            <input type="number" min="1" max="7" value={newPlanDays} onChange={(e) => setNewPlanDays(e.target.value)}
-              placeholder="Nº de días (1-7)" className="flex-1 px-3 py-2 bg-slate-800/80 border border-slate-600/50 rounded-lg text-white text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/40" />
-            <button onClick={handleCreatePlan} className="px-4 py-2 bg-emerald-500 text-white rounded-lg text-sm font-medium hover:bg-emerald-600 transition-colors">Crear</button>
-            <button onClick={() => { setShowNewPlan(false); setPlanError(""); }} className="p-2 text-slate-400 hover:text-white"><X className="w-4 h-4" /></button>
+        <div className="card p-4 space-y-3">
+          <p className="text-sm font-medium text-ink">Crear nuevo plan</p>
+          <div className="flex items-center gap-2">
+            <input
+              type="number"
+              min="1"
+              max="7"
+              value={newPlanDays}
+              onChange={(e) => setNewPlanDays(e.target.value)}
+              placeholder="Cantidad de días (1 a 7)"
+              className="input flex-1"
+            />
+            <button onClick={handleCreatePlan} className="btn-primary">
+              Crear
+            </button>
+            <button
+              onClick={() => {
+                setShowNewPlan(false);
+                setPlanError("");
+              }}
+              className="btn-icon"
+            >
+              <X className="w-4 h-4" />
+            </button>
           </div>
-          {planError && <p className="text-red-400 text-xs">{planError}</p>}
+          {planError && (
+            <p className="alert-danger">
+              <AlertCircle className="w-4 h-4 shrink-0" />
+              {planError}
+            </p>
+          )}
         </div>
       )}
 
       {planKeys.length === 0 ? (
-        <div className="text-center py-10 text-slate-500 text-sm">No hay planes creados aún.</div>
+        <div className="empty-state">Todavía no hay planes creados.</div>
       ) : (
         <div className="space-y-3">
           {planKeys.map((planDays) => {
             const plan = plans[planDays];
-            const dayNums = Object.keys(plan).map(Number).sort((a, b) => a - b);
+            const dayNums = Object.keys(plan)
+              .map(Number)
+              .sort((a, b) => a - b);
             const isExpanded = expandedPlan === planDays;
 
             return (
-              <div key={planDays} className="bg-slate-800/40 border border-slate-700/30 rounded-xl overflow-hidden">
-                <div className="flex items-center justify-between p-4">
-                  <button onClick={() => setExpandedPlan(isExpanded ? null : planDays)} className="flex items-center gap-3 flex-1 text-left">
-                    {isExpanded ? <ChevronDown className="w-4 h-4 text-emerald-400" /> : <ChevronRight className="w-4 h-4 text-slate-500" />}
-                    <Calendar className="w-5 h-5 text-cyan-400" />
-                    <div>
-                      <span className="text-white font-semibold">Plan de {planDays} días/semana</span>
-                      <span className="text-slate-500 text-xs ml-2">({dayNums.length} días configurados)</span>
-                    </div>
+              <div key={planDays} className="card overflow-hidden">
+                <div className="flex items-center justify-between p-4 gap-2">
+                  <button
+                    onClick={() => setExpandedPlan(isExpanded ? null : planDays)}
+                    className="flex items-center gap-3 flex-1 text-left min-w-0 cursor-pointer"
+                  >
+                    {isExpanded ? (
+                      <ChevronDown className="w-4 h-4 text-ink-soft shrink-0" />
+                    ) : (
+                      <ChevronRight className="w-4 h-4 text-ink-muted shrink-0" />
+                    )}
+                    <Calendar className="w-5 h-5 text-ink-muted shrink-0" />
+                    <span className="min-w-0">
+                      <span className="text-ink font-semibold">Plan de {planDays} días/semana</span>
+                      <span className="text-ink-muted text-xs ml-2">
+                        ({dayNums.length} días configurados)
+                      </span>
+                    </span>
                   </button>
-                  <button onClick={() => { if (confirm(`¿Eliminar el plan de ${planDays} días?`)) deletePlan(planDays); }}
-                    className="p-2 text-slate-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-all"><Trash2 className="w-4 h-4" /></button>
+                  <button
+                    onClick={() => {
+                      if (confirm(`¿Eliminar el plan de ${planDays} días?`)) deletePlan(planDays);
+                    }}
+                    className="btn-icon-danger shrink-0"
+                    title="Eliminar plan"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
                 </div>
 
                 {isExpanded && (
-                  <div className="border-t border-slate-700/30 px-4 pb-4 pt-3 space-y-3">
+                  <div className="border-t border-line p-4 space-y-3 bg-canvas">
                     {dayNums.map((dayNum) => {
                       const day = plan[dayNum];
-                      const isDayExpanded = expandedDay === `${planDays}-${dayNum}`;
+                      const key = `${planDays}-${dayNum}`;
+
                       return (
-                        <div key={dayNum} className="bg-slate-900/40 border border-slate-700/20 rounded-xl overflow-hidden">
-                          <div className="flex items-center justify-between p-3">
-                            <button onClick={() => setExpandedDay(isDayExpanded ? null : `${planDays}-${dayNum}`)} className="flex items-center gap-2 flex-1 text-left">
-                              {isDayExpanded ? <ChevronDown className="w-3.5 h-3.5 text-emerald-400" /> : <ChevronRight className="w-3.5 h-3.5 text-slate-500" />}
-                              <span className="text-sm font-medium text-white">Día {dayNum}: {day.title}</span>
-                              <span className="text-xs text-slate-500">— {day.focus} · {day.exercises.length} ej.</span>
-                            </button>
-                            <button onClick={() => { if (confirm(`¿Eliminar Día ${dayNum}?`)) deleteDayFromPlan(planDays, dayNum); }}
-                              className="p-1.5 text-slate-500 hover:text-red-400 rounded transition-all"><Trash2 className="w-3.5 h-3.5" /></button>
-                          </div>
-
-                          {isDayExpanded && (
-                            <div className="border-t border-slate-700/20 p-3 space-y-2">
-                              {day.exercises.length === 0 && <p className="text-xs text-slate-500 text-center py-4">No hay ejercicios.</p>}
-                              {day.exercises.map((ex) => {
-                                const isEditing = editingExercise && editingExercise.planDays === planDays && editingExercise.dayNum === dayNum && editingExercise.id === ex.id;
-                                if (isEditing) {
-                                  return <EditExerciseForm key={ex.id} form={editForm} setForm={setEditForm} onSave={saveEditExercise} onCancel={() => { setEditingExercise(null); setEditForm({}); }} />;
-                                }
-                                return (
-                                  <div key={ex.id} className="flex items-center gap-3 p-2.5 bg-slate-800/30 rounded-lg hover:bg-slate-800/50 transition-all">
-                                    <Dumbbell className="w-4 h-4 text-emerald-500/50 shrink-0" />
-                                    <div className="flex-1 min-w-0">
-                                      <p className="text-sm text-white truncate">{ex.name}</p>
-                                      <p className="text-xs text-slate-500">{ex.muscle} · {ex.sets}×{ex.reps} · {ex.rest}</p>
-                                    </div>
-                                    <div className="flex gap-1 shrink-0">
-                                      <button onClick={() => startEditExercise(planDays, dayNum, ex)} className="p-1.5 text-slate-500 hover:text-cyan-400 rounded transition-all"><Edit3 className="w-3.5 h-3.5" /></button>
-                                      <button onClick={() => { if (confirm(`¿Eliminar "${ex.name}"?`)) deleteExercise(planDays, dayNum, ex.id); }}
-                                        className="p-1.5 text-slate-500 hover:text-red-400 rounded transition-all"><Trash2 className="w-3.5 h-3.5" /></button>
-                                    </div>
-                                  </div>
-                                );
-                              })}
-
-                              {addingExerciseTo && addingExerciseTo.planDays === planDays && addingExerciseTo.dayNum === dayNum ? (
-                                <ExerciseForm form={newExForm} setForm={setNewExForm}
-                                  onSubmit={handleAddExercise}
-                                  onCancel={() => { setAddingExerciseTo(null); setNewExForm({ ...emptyExForm }); }} />
-                              ) : (
-                                <button onClick={() => setAddingExerciseTo({ planDays, dayNum })}
-                                  className="w-full flex items-center justify-center gap-1.5 py-2 text-xs text-slate-500 hover:text-cyan-400 border border-dashed border-slate-700/40 hover:border-cyan-500/30 rounded-lg transition-all mt-1">
-                                  <Plus className="w-3.5 h-3.5" />Agregar ejercicio
-                                </button>
-                              )}
-                            </div>
+                        <DayAccordion
+                          key={dayNum}
+                          dayNum={dayNum}
+                          day={day}
+                          expanded={expandedDay === key}
+                          onToggle={() => setExpandedDay(expandedDay === key ? null : key)}
+                          onDelete={() => {
+                            if (confirm(`¿Eliminar el día ${dayNum}?`))
+                              deleteDayFromPlan(planDays, dayNum);
+                          }}
+                        >
+                          {day.exercises.length === 0 && (
+                            <p className="text-xs text-ink-muted text-center py-3">
+                              No hay ejercicios en este día.
+                            </p>
                           )}
-                        </div>
+
+                          {day.exercises.map((ex) =>
+                            editingExercise?.planDays === planDays &&
+                            editingExercise?.dayNum === dayNum &&
+                            editingExercise?.id === ex.id ? (
+                              <ExerciseEditor
+                                key={ex.id}
+                                form={editForm}
+                                setForm={setEditForm}
+                                onSubmit={saveEditExercise}
+                                onCancel={() => {
+                                  setEditingExercise(null);
+                                  setEditForm({});
+                                }}
+                                submitLabel="Guardar"
+                              />
+                            ) : (
+                              <ExerciseRow
+                                key={ex.id}
+                                exercise={ex}
+                                onEdit={() => {
+                                  setEditingExercise({ planDays, dayNum, id: ex.id });
+                                  setEditForm({ ...ex });
+                                }}
+                                onDelete={() => {
+                                  if (confirm(`¿Eliminar "${ex.name}"?`))
+                                    deleteExercise(planDays, dayNum, ex.id);
+                                }}
+                              />
+                            )
+                          )}
+
+                          {addingExerciseTo?.planDays === planDays &&
+                          addingExerciseTo?.dayNum === dayNum ? (
+                            <ExerciseEditor
+                              form={newExForm}
+                              setForm={setNewExForm}
+                              onSubmit={handleAddExercise}
+                              onCancel={() => {
+                                setAddingExerciseTo(null);
+                                setNewExForm({ ...emptyExForm });
+                              }}
+                            />
+                          ) : (
+                            <DashedButton
+                              onClick={() => setAddingExerciseTo({ planDays, dayNum })}
+                              label="Agregar ejercicio"
+                            />
+                          )}
+                        </DayAccordion>
                       );
                     })}
 
                     {addingDayToPlan === planDays ? (
-                      <div className="p-3 bg-violet-500/5 border border-violet-500/20 rounded-xl space-y-2">
-                        <p className="text-xs font-medium text-violet-400">Nuevo día</p>
-                        <div className="grid grid-cols-2 gap-2">
-                          <input value={newDayTitle} onChange={(e) => setNewDayTitle(e.target.value)} placeholder="Título"
-                            className="px-2.5 py-1.5 bg-slate-800 border border-slate-600/50 rounded-lg text-white text-sm focus:outline-none focus:ring-1 focus:ring-violet-500/40" />
-                          <input value={newDayFocus} onChange={(e) => setNewDayFocus(e.target.value)} placeholder="Enfoque"
-                            className="px-2.5 py-1.5 bg-slate-800 border border-slate-600/50 rounded-lg text-white text-sm focus:outline-none focus:ring-1 focus:ring-violet-500/40" />
-                        </div>
-                        <div className="flex gap-2 justify-end">
-                          <button onClick={() => { setAddingDayToPlan(null); setNewDayTitle(""); setNewDayFocus(""); }}
-                            className="px-3 py-1.5 text-slate-400 hover:text-white text-xs rounded-lg transition-colors">Cancelar</button>
-                          <button onClick={() => handleAddDay(planDays)} disabled={!newDayTitle.trim()}
-                            className="flex items-center gap-1 px-3 py-1.5 bg-violet-500 text-white text-xs font-medium rounded-lg hover:bg-violet-600 disabled:opacity-50 transition-colors">
-                            <Plus className="w-3 h-3" />Agregar
-                          </button>
-                        </div>
-                      </div>
+                      <DayForm
+                        title={newDayTitle}
+                        focus={newDayFocus}
+                        setTitle={setNewDayTitle}
+                        setFocus={setNewDayFocus}
+                        onSubmit={() => handleAddDay(planDays)}
+                        onCancel={() => {
+                          setAddingDayToPlan(null);
+                          setNewDayTitle("");
+                          setNewDayFocus("");
+                        }}
+                      />
                     ) : (
-                      <button onClick={() => setAddingDayToPlan(planDays)}
-                        className="w-full flex items-center justify-center gap-1.5 py-2.5 text-xs text-slate-500 hover:text-violet-400 border border-dashed border-slate-700/40 hover:border-violet-500/30 rounded-xl transition-all">
-                        <Plus className="w-3.5 h-3.5" />Agregar día
-                      </button>
+                      <DashedButton
+                        onClick={() => setAddingDayToPlan(planDays)}
+                        label="Agregar día"
+                      />
                     )}
                   </div>
                 )}
@@ -1004,7 +1164,17 @@ function PlansTab() {
   );
 }
 
-// ── Billing Tab ──────────────────────────────────────────────────────────────
+// ── Pestaña: cobranzas ───────────────────────────────────────────────────────
+
+function StatCard({ label, value, tone = "ink" }) {
+  const toneClass = { ink: "text-ink", ok: "text-ok", warn: "text-warn" }[tone];
+  return (
+    <div className="card p-4">
+      <p className="text-ink-muted text-xs mb-1">{label}</p>
+      <p className={`text-xl font-semibold ${toneClass}`}>{value}</p>
+    </div>
+  );
+}
 
 function BillingTab() {
   const { users, gym, getCurrentMonth, adminToggleMonthly } = useApp();
@@ -1012,7 +1182,7 @@ function BillingTab() {
   const [error, setError] = useState("");
   const currentMonth = getCurrentMonth();
 
-  // Re-read the summary whenever a due gets marked or cleared.
+  // Se vuelve a pedir el resumen cada vez que se marca o desmarca una cuota.
   const paidSignature = users.map((u) => `${u.id}:${u.monthlyPaidMonth}`).join("|");
 
   useEffect(() => {
@@ -1031,56 +1201,52 @@ function BillingTab() {
 
   return (
     <div className="space-y-5">
-      <h3 className="text-lg font-semibold text-white flex items-center gap-2">
-        <Wallet className="w-5 h-5 text-emerald-400" />
+      <h3 className="section-title flex items-center gap-2">
+        <Wallet className="w-5 h-5 text-ink-soft" />
         Cobranzas de {currentMonth}
       </h3>
 
-      {error && <p className="px-3 py-2 bg-red-500/10 border border-red-500/30 rounded-lg text-red-400 text-xs">{error}</p>}
+      {error && (
+        <p className="alert-danger">
+          <AlertCircle className="w-4 h-4 shrink-0" />
+          {error}
+        </p>
+      )}
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <div className="p-4 bg-slate-800/40 border border-slate-700/30 rounded-xl">
-          <p className="text-slate-500 text-xs mb-1">Recaudado</p>
-          <p className="text-emerald-400 text-xl font-bold">{money(summary?.revenue, currency)}</p>
-        </div>
-        <div className="p-4 bg-slate-800/40 border border-slate-700/30 rounded-xl">
-          <p className="text-slate-500 text-xs mb-1">Socios</p>
-          <p className="text-white text-xl font-bold">{summary?.memberCount ?? users.length}</p>
-        </div>
-        <div className="p-4 bg-slate-800/40 border border-slate-700/30 rounded-xl">
-          <p className="text-slate-500 text-xs mb-1">Al día</p>
-          <p className="text-cyan-400 text-xl font-bold">{summary?.paidCount ?? 0}</p>
-        </div>
-        <div className="p-4 bg-slate-800/40 border border-slate-700/30 rounded-xl">
-          <p className="text-slate-500 text-xs mb-1">Pendientes</p>
-          <p className="text-amber-400 text-xl font-bold">{summary?.unpaidCount ?? pending.length}</p>
-        </div>
+        <StatCard label="Recaudado" value={money(summary?.revenue, currency)} tone="ok" />
+        <StatCard label="Socios" value={summary?.memberCount ?? users.length} />
+        <StatCard label="Al día" value={summary?.paidCount ?? 0} />
+        <StatCard
+          label="Pendientes"
+          value={summary?.unpaidCount ?? pending.length}
+          tone="warn"
+        />
       </div>
 
       <div>
-        <h4 className="text-sm font-semibold text-white mb-2 flex items-center gap-2">
-          <span className="w-2 h-2 rounded-full bg-amber-400" />Cuotas pendientes ({pending.length})
+        <h4 className="text-sm font-semibold text-ink mb-2">
+          Cuotas pendientes ({pending.length})
         </h4>
         {pending.length === 0 ? (
-          <p className="text-slate-500 text-sm py-4">Todos los socios están al día. 🎉</p>
+          <p className="text-ink-soft text-sm py-4">Todos los socios están al día.</p>
         ) : (
           <div className="space-y-2">
             {pending.map((user) => (
-              <div key={user.id} className="flex items-center justify-between p-3 bg-slate-800/40 border border-slate-700/30 rounded-xl">
+              <div key={user.id} className="card p-3 flex items-center justify-between gap-3">
                 <div className="flex items-center gap-3 min-w-0">
-                  <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-emerald-500 to-cyan-500 flex items-center justify-center text-white font-bold text-xs shrink-0">
-                    {user.avatar}
-                  </div>
+                  <div className="avatar w-9 h-9 text-xs">{user.avatar}</div>
                   <div className="min-w-0">
-                    <p className="text-white text-sm font-medium truncate">{user.name}</p>
-                    <p className="text-slate-500 text-xs">@{user.username}</p>
+                    <p className="text-ink text-sm font-medium truncate">{user.name}</p>
+                    <p className="text-ink-muted text-xs">@{user.username}</p>
                   </div>
                 </div>
                 <button
                   onClick={() => adminToggleMonthly(user.id)}
-                  className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 rounded-lg text-xs font-medium hover:bg-emerald-500/25 transition-all shrink-0"
+                  className="btn-primary btn-sm shrink-0"
                 >
-                  <CheckCircle2 className="w-3.5 h-3.5" />Registrar pago
+                  <CheckCircle2 className="w-3.5 h-3.5" />
+                  Registrar pago
                 </button>
               </div>
             ))}
@@ -1090,14 +1256,15 @@ function BillingTab() {
 
       {summary?.byMonth?.length > 1 && (
         <div>
-          <h4 className="text-sm font-semibold text-white mb-2 flex items-center gap-2">
-            <TrendingUp className="w-4 h-4 text-cyan-400" />Historial mensual
+          <h4 className="text-sm font-semibold text-ink mb-2 flex items-center gap-2">
+            <TrendingUp className="w-4 h-4 text-ink-soft" />
+            Historial mensual
           </h4>
-          <div className="space-y-1.5">
+          <div className="card divide-y divide-line">
             {summary.byMonth.map((row) => (
-              <div key={row.month} className="flex items-center justify-between px-3 py-2 bg-slate-800/30 rounded-lg text-sm">
-                <span className="text-slate-400 font-mono text-xs">{row.month}</span>
-                <span className="text-emerald-400 font-medium">{money(row.total, currency)}</span>
+              <div key={row.month} className="flex items-center justify-between px-4 py-2.5">
+                <span className="text-sm text-ink-soft font-mono">{row.month}</span>
+                <span className="text-sm font-medium text-ink">{money(row.total, currency)}</span>
               </div>
             ))}
           </div>
@@ -1107,7 +1274,7 @@ function BillingTab() {
   );
 }
 
-// ── Settings Tab ─────────────────────────────────────────────────────────────
+// ── Pestaña: configuración ───────────────────────────────────────────────────
 
 function SettingsTab() {
   const { gym, updateGym } = useApp();
@@ -1130,58 +1297,88 @@ function SettingsTab() {
       proPrice: Number(form.proPrice),
     });
     setSaving(false);
-    setStatus(result.success ? { ok: true, message: "Cambios guardados." } : { ok: false, message: result.error });
+    setStatus(
+      result.success
+        ? { ok: true, message: "Cambios guardados." }
+        : { ok: false, message: result.error }
+    );
   }
-
-  const field = "w-full px-3 py-2 bg-slate-800 border border-slate-600/50 rounded-lg text-white text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/40";
 
   return (
     <form onSubmit={handleSave} className="space-y-5 max-w-lg">
-      <h3 className="text-lg font-semibold text-white flex items-center gap-2">
-        <Settings className="w-5 h-5 text-emerald-400" />Configuración del gimnasio
+      <h3 className="section-title flex items-center gap-2">
+        <Settings className="w-5 h-5 text-ink-soft" />
+        Configuración del gimnasio
       </h3>
 
       <div>
-        <label className="block text-xs text-slate-400 mb-1">Nombre del gimnasio</label>
-        <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className={field} />
+        <label className="label">Nombre del gimnasio</label>
+        <input
+          value={form.name}
+          onChange={(e) => setForm({ ...form, name: e.target.value })}
+          className="input"
+        />
       </div>
 
       <div>
-        <label className="block text-xs text-slate-400 mb-1">WhatsApp de contacto</label>
-        <input value={form.whatsapp} onChange={(e) => setForm({ ...form, whatsapp: e.target.value })} placeholder="Ej: 3329534029" className={field} />
-        <p className="text-slate-600 text-xs mt-1">Los socios usan este número para coordinar pagos desde su panel.</p>
+        <label className="label">WhatsApp de contacto</label>
+        <input
+          value={form.whatsapp}
+          onChange={(e) => setForm({ ...form, whatsapp: e.target.value })}
+          placeholder="Ej: 3329534029"
+          className="input"
+        />
+        <p className="hint">Tus socios lo usan para coordinar el pago de la cuota.</p>
       </div>
 
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <label className="block text-xs text-slate-400 mb-1">Cuota mensual</label>
-          <input type="number" min="0" value={form.monthlyPrice} onChange={(e) => setForm({ ...form, monthlyPrice: e.target.value })} className={field} />
+          <label className="label">Cuota mensual</label>
+          <input
+            type="number"
+            min="0"
+            value={form.monthlyPrice}
+            onChange={(e) => setForm({ ...form, monthlyPrice: e.target.value })}
+            className="input"
+          />
         </div>
         <div>
-          <label className="block text-xs text-slate-400 mb-1">Suscripción Pro</label>
-          <input type="number" min="0" value={form.proPrice} onChange={(e) => setForm({ ...form, proPrice: e.target.value })} className={field} />
+          <label className="label">Suscripción Pro</label>
+          <input
+            type="number"
+            min="0"
+            value={form.proPrice}
+            onChange={(e) => setForm({ ...form, proPrice: e.target.value })}
+            className="input"
+          />
         </div>
       </div>
 
-      <div className="p-3 bg-slate-800/40 border border-slate-700/30 rounded-xl">
-        <p className="text-slate-500 text-xs mb-1">Identificador para tus socios</p>
-        <p className="text-cyan-400 font-mono text-sm">{gym?.slug}</p>
+      <div className="card p-3">
+        <p className="text-ink-muted text-xs mb-1">Identificador de tu gimnasio</p>
+        <p className="text-ink font-mono text-sm">{gym?.slug}</p>
       </div>
 
       {status && (
-        <p className={`px-3 py-2 rounded-lg text-xs border ${status.ok ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-400" : "bg-red-500/10 border-red-500/30 text-red-400"}`}>
+        <p className={status.ok ? "alert-ok" : "alert-danger"}>
+          {status.ok ? (
+            <CheckCircle2 className="w-4 h-4 shrink-0" />
+          ) : (
+            <AlertCircle className="w-4 h-4 shrink-0" />
+          )}
           {status.message}
         </p>
       )}
 
-      <button type="submit" disabled={saving} className="px-4 py-2.5 bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-2">
-        <Save className="w-4 h-4" />{saving ? "Guardando…" : "Guardar cambios"}
+      <button type="submit" disabled={saving} className="btn-primary">
+        <Save className="w-4 h-4" />
+        {saving ? "Guardando…" : "Guardar cambios"}
       </button>
     </form>
   );
 }
 
-// ── Main Admin Panel ─────────────────────────────────────────────────────────
+// ── Panel principal ──────────────────────────────────────────────────────────
 
 export default function AdminPanel() {
   const { logout, gym } = useApp();
@@ -1189,43 +1386,73 @@ export default function AdminPanel() {
   const [selectedUser, setSelectedUser] = useState(null);
   const [selectedProgressUser, setSelectedProgressUser] = useState(null);
 
+  const showTabs = !selectedUser && !selectedProgressUser;
+
   return (
-    <div className="min-h-screen bg-[#0a0f1a]">
-      <header className="sticky top-0 z-30 bg-slate-900/80 backdrop-blur-xl border-b border-slate-700/40">
-        <div className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center shadow-lg shadow-amber-500/20">
-              <Shield className="w-5 h-5 text-white" />
+    <div className="min-h-screen">
+      <header className="app-header">
+        <div className="max-w-5xl mx-auto px-4 h-16 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-9 h-9 rounded-lg bg-brand flex items-center justify-center shrink-0">
+              <Dumbbell className="w-5 h-5 text-white" />
             </div>
-            <div className="ml-3 hidden sm:block">
-              <h1 className="text-white font-bold text-lg leading-none">Admin Panel</h1>
-              <p className="text-slate-400 text-xs">{gym?.name ?? "KineFix"} · Gestión</p>
+            <div className="min-w-0">
+              <h1 className="text-ink font-semibold text-sm leading-tight truncate">
+                {gym?.name ?? "KineFix"}
+              </h1>
+              <p className="text-ink-muted text-xs">Panel de administración</p>
             </div>
           </div>
-          <button onClick={logout}
-            className="flex items-center gap-1.5 px-3 py-2 text-slate-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-all text-sm">
-            <LogOut className="w-4 h-4" /><span className="hidden sm:inline">Salir</span>
+          <button onClick={logout} className="btn-ghost btn-sm shrink-0">
+            <LogOut className="w-4 h-4" />
+            <span className="hidden sm:inline">Salir</span>
           </button>
         </div>
       </header>
 
-      <main className="max-w-5xl mx-auto px-4 py-6 space-y-6">
-        {!selectedUser && !selectedProgressUser && (
-          <div className="flex gap-2 flex-wrap">
-            <TabButton active={activeTab === "users"} icon={Users} label="Usuarios" onClick={() => setActiveTab("users")} />
-            <TabButton active={activeTab === "billing"} icon={Wallet} label="Cobranzas" onClick={() => setActiveTab("billing")} />
-            <TabButton active={activeTab === "plans"} icon={ClipboardList} label="Planes Compartidos" onClick={() => setActiveTab("plans")} />
-            <TabButton active={activeTab === "settings"} icon={Settings} label="Configuración" onClick={() => setActiveTab("settings")} />
+      <main className="max-w-5xl mx-auto px-4 py-6 space-y-5">
+        {showTabs && (
+          <div className="flex gap-1 flex-wrap">
+            <TabButton
+              active={activeTab === "users"}
+              icon={Users}
+              label="Socios"
+              onClick={() => setActiveTab("users")}
+            />
+            <TabButton
+              active={activeTab === "billing"}
+              icon={Wallet}
+              label="Cobranzas"
+              onClick={() => setActiveTab("billing")}
+            />
+            <TabButton
+              active={activeTab === "plans"}
+              icon={ClipboardList}
+              label="Planes"
+              onClick={() => setActiveTab("plans")}
+            />
+            <TabButton
+              active={activeTab === "settings"}
+              icon={Settings}
+              label="Configuración"
+              onClick={() => setActiveTab("settings")}
+            />
           </div>
         )}
 
-        <div className="bg-slate-900/50 border border-slate-700/30 rounded-2xl p-5">
+        <div className="card p-5">
           {selectedUser ? (
             <CustomPlanEditor user={selectedUser} onBack={() => setSelectedUser(null)} />
           ) : selectedProgressUser ? (
-            <UserProgressView user={selectedProgressUser} onBack={() => setSelectedProgressUser(null)} />
+            <UserProgressView
+              user={selectedProgressUser}
+              onBack={() => setSelectedProgressUser(null)}
+            />
           ) : activeTab === "users" ? (
-            <UsersTab onSelectUser={setSelectedUser} onSelectProgress={setSelectedProgressUser} />
+            <UsersTab
+              onSelectUser={setSelectedUser}
+              onSelectProgress={setSelectedProgressUser}
+            />
           ) : activeTab === "billing" ? (
             <BillingTab />
           ) : activeTab === "settings" ? (
@@ -1237,7 +1464,7 @@ export default function AdminPanel() {
       </main>
 
       <footer className="max-w-5xl mx-auto px-4 py-8 text-center">
-        <p className="text-xs text-slate-600">© 2026 KineFix · Panel Admin</p>
+        <p className="text-xs text-ink-muted">© 2026 KineFix</p>
       </footer>
     </div>
   );

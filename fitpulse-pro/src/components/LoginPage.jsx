@@ -1,57 +1,56 @@
 import { useEffect, useState } from "react";
 import {
+  AlertCircle,
   ArrowLeft,
   Building2,
   Dumbbell,
   Eye,
   EyeOff,
-  UserCheck,
+  Loader2,
   UserPlus,
-  Zap,
 } from "lucide-react";
 import { useApp } from "../context/AppContext";
 import { api } from "../api/client";
 
 const DEMO_ACCOUNTS = [
-  { username: "admin", password: "admin1234", label: "🛡️ Administrador (Panel de gestión)" },
-  { username: "user2dias", password: "demo1234", label: "Martín López — 2 días/semana" },
-  { username: "user3dias", password: "demo1234", label: "Lucía Fernández — 3 días/semana" },
-  { username: "user5dias", password: "demo1234", label: "Diego Ramírez — 5 días/semana" },
+  { username: "admin", password: "admin1234", label: "Administrador", role: "Panel de gestión" },
+  { username: "user2dias", password: "demo1234", label: "Martín López", role: "2 días/semana" },
+  { username: "user3dias", password: "demo1234", label: "Lucía Fernández", role: "3 días/semana" },
+  { username: "user5dias", password: "demo1234", label: "Diego Ramírez", role: "5 días/semana" },
 ];
-
-const inputClass =
-  "w-full px-4 py-3 bg-slate-800/80 border border-slate-600/50 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500/50 transition-all";
 
 function ErrorBanner({ message }) {
   if (!message) return null;
   return (
-    <div className="flex items-center gap-2 px-4 py-3 bg-red-500/10 border border-red-500/30 rounded-xl text-red-400 text-sm">
-      <svg className="w-4 h-4 shrink-0" fill="currentColor" viewBox="0 0 20 20">
-        <path
-          fillRule="evenodd"
-          d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
-          clipRule="evenodd"
-        />
-      </svg>
-      {message}
+    <div className="alert-danger">
+      <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+      <span>{message}</span>
     </div>
   );
 }
 
-function Spinner({ label }) {
+function PasswordInput({ value, onChange, placeholder }) {
+  const [visible, setVisible] = useState(false);
   return (
-    <span className="flex items-center justify-center gap-2">
-      <svg className="animate-spin w-5 h-5" viewBox="0 0 24 24" fill="none">
-        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-      </svg>
-      {label}
-    </span>
+    <div className="relative">
+      <input
+        type={visible ? "text" : "password"}
+        value={value}
+        onChange={onChange}
+        placeholder={placeholder}
+        className="input pr-11"
+      />
+      <button
+        type="button"
+        onClick={() => setVisible(!visible)}
+        aria-label={visible ? "Ocultar contraseña" : "Mostrar contraseña"}
+        className="absolute right-3 top-1/2 -translate-y-1/2 text-ink-muted hover:text-ink-soft transition-colors"
+      >
+        {visible ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+      </button>
+    </div>
   );
 }
-
-const submitClass =
-  "w-full py-3 px-4 bg-gradient-to-r from-emerald-500 to-cyan-500 text-white font-semibold rounded-xl hover:from-emerald-600 hover:to-cyan-600 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-lg shadow-emerald-500/20";
 
 export default function LoginPage() {
   const { login, register, registerGym } = useApp();
@@ -64,12 +63,10 @@ export default function LoginPage() {
 
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
 
   const [regName, setRegName] = useState("");
   const [regUsername, setRegUsername] = useState("");
   const [regPassword, setRegPassword] = useState("");
-  const [showRegPassword, setShowRegPassword] = useState(false);
 
   const [gymForm, setGymForm] = useState({
     gymName: "",
@@ -80,7 +77,6 @@ export default function LoginPage() {
     monthlyPrice: "15000",
     proPrice: "8000",
   });
-  const [showGymPassword, setShowGymPassword] = useState(false);
 
   useEffect(() => {
     api
@@ -145,18 +141,12 @@ export default function LoginPage() {
     setLoading(false);
   }
 
-  function quickFill(account) {
-    setUsername(account.username);
-    setPassword(account.password);
-    setError("");
-  }
-
   const gymSelector = (
     <div>
-      <label className="block text-sm font-medium text-slate-300 mb-2">Gimnasio</label>
+      <label className="label">Gimnasio</label>
       {gyms.length === 0 ? (
-        <p className="text-sm text-slate-500 px-4 py-3 bg-slate-800/50 border border-slate-700/40 rounded-xl">
-          Todavía no hay gimnasios registrados en esta instalación.
+        <p className="text-sm text-ink-muted px-3.5 py-2.5 bg-sunken border border-line rounded-lg">
+          Todavía no hay gimnasios registrados.
         </p>
       ) : (
         <select
@@ -165,7 +155,7 @@ export default function LoginPage() {
             setGymSlug(e.target.value);
             setError("");
           }}
-          className={inputClass}
+          className="input"
         >
           {gyms.map((g) => (
             <option key={g.slug} value={g.slug}>
@@ -178,43 +168,26 @@ export default function LoginPage() {
   );
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#0a0f1a] relative overflow-hidden py-10">
-      <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute -top-40 -right-40 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl" />
-        <div className="absolute -bottom-40 -left-40 w-96 h-96 bg-cyan-500/10 rounded-full blur-3xl" />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-emerald-500/5 rounded-full blur-3xl" />
-      </div>
-
-      <div
-        className="absolute inset-0 opacity-[0.03]"
-        style={{
-          backgroundImage:
-            "linear-gradient(rgba(255,255,255,.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.1) 1px, transparent 1px)",
-          backgroundSize: "60px 60px",
-        }}
-      />
-
-      <div className="relative z-10 w-full max-w-md px-4">
+    <div className="min-h-screen flex flex-col items-center justify-center px-4 py-12">
+      <div className="w-full max-w-sm">
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-emerald-500 to-cyan-500 mb-4 shadow-lg shadow-emerald-500/25">
-            <Dumbbell className="w-8 h-8 text-white" />
+          <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-brand mb-4">
+            <Dumbbell className="w-6 h-6 text-white" />
           </div>
-          <h1 className="text-3xl font-bold text-white mb-2 tracking-tight">KineFix</h1>
-          <p className="text-slate-400 mt-1 text-sm">Tu plataforma de entrenamiento inteligente</p>
+          <h1 className="text-2xl font-semibold text-ink tracking-tight">KineFix</h1>
+          <p className="text-ink-soft text-sm mt-1.5">Gestión de socios y entrenamiento</p>
         </div>
 
+        {/* ─── Iniciar sesión ─── */}
         {view === "login" && (
-          <div className="bg-slate-900/80 backdrop-blur-xl border border-slate-700/50 rounded-2xl p-8 shadow-2xl shadow-black/30">
-            <div className="flex items-center gap-2 mb-6">
-              <Zap className="w-5 h-5 text-emerald-400" />
-              <h2 className="text-lg font-semibold text-white">Iniciar Sesión</h2>
-            </div>
+          <div className="card p-6">
+            <h2 className="section-title mb-5">Iniciar sesión</h2>
 
-            <form onSubmit={handleLogin} className="space-y-5">
+            <form onSubmit={handleLogin} className="space-y-4">
               {gymSelector}
 
               <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">Usuario</label>
+                <label className="label">Usuario</label>
                 <input
                   type="text"
                   value={username}
@@ -222,32 +195,21 @@ export default function LoginPage() {
                     setUsername(e.target.value);
                     setError("");
                   }}
-                  placeholder="Ingresa tu usuario"
-                  className={inputClass}
+                  placeholder="Tu nombre de usuario"
+                  className="input"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">Contraseña</label>
-                <div className="relative">
-                  <input
-                    type={showPassword ? "text" : "password"}
-                    value={password}
-                    onChange={(e) => {
-                      setPassword(e.target.value);
-                      setError("");
-                    }}
-                    placeholder="Ingresa tu contraseña"
-                    className={`${inputClass} pr-12`}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200 transition-colors"
-                  >
-                    {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                  </button>
-                </div>
+                <label className="label">Contraseña</label>
+                <PasswordInput
+                  value={password}
+                  onChange={(e) => {
+                    setPassword(e.target.value);
+                    setError("");
+                  }}
+                  placeholder="Tu contraseña"
+                />
               </div>
 
               <ErrorBanner message={error} />
@@ -255,44 +217,46 @@ export default function LoginPage() {
               <button
                 type="submit"
                 disabled={loading || !gymSlug || !username || !password}
-                className={submitClass}
+                className="btn-primary w-full"
               >
-                {loading ? <Spinner label="Accediendo…" /> : "Acceder"}
+                {loading && <Loader2 className="w-4 h-4 animate-spin" />}
+                {loading ? "Accediendo…" : "Acceder"}
               </button>
             </form>
 
-            <button
-              onClick={() => switchView("register")}
-              className="w-full mt-4 py-2.5 flex items-center justify-center gap-2 text-sm text-slate-400 hover:text-emerald-400 transition-colors"
-            >
-              <UserPlus className="w-4 h-4" />
-              ¿No tenés cuenta? Registrate aquí
-            </button>
-
-            <button
-              onClick={() => switchView("gym")}
-              className="w-full py-2.5 flex items-center justify-center gap-2 text-sm text-slate-400 hover:text-cyan-400 transition-colors"
-            >
-              <Building2 className="w-4 h-4" />
-              Registrá tu gimnasio
-            </button>
+            <div className="mt-5 pt-5 border-t border-line space-y-2">
+              <button onClick={() => switchView("register")} className="btn-ghost w-full">
+                <UserPlus className="w-4 h-4" />
+                Crear cuenta de socio
+              </button>
+              <button onClick={() => switchView("gym")} className="btn-ghost w-full">
+                <Building2 className="w-4 h-4" />
+                Registrá tu gimnasio
+              </button>
+            </div>
 
             {gymSlug === "demo" && (
-              <div className="mt-4 pt-4 border-t border-slate-700/50">
-                <p className="text-xs text-slate-500 uppercase tracking-wider font-medium mb-3 flex items-center gap-1.5">
-                  <UserCheck className="w-3.5 h-3.5" />
-                  Acceso rápido (cuentas de prueba)
+              <div className="mt-5 pt-5 border-t border-line">
+                <p className="text-xs font-medium text-ink-muted uppercase tracking-wide mb-3">
+                  Cuentas de prueba
                 </p>
-                <div className="space-y-2">
+                <div className="space-y-1.5">
                   {DEMO_ACCOUNTS.map((account) => (
                     <button
                       key={account.username}
                       type="button"
-                      onClick={() => quickFill(account)}
-                      className="w-full flex items-center justify-between px-3 py-2.5 bg-slate-800/50 hover:bg-slate-700/50 border border-slate-700/30 rounded-lg text-sm text-slate-300 hover:text-white transition-all group"
+                      onClick={() => {
+                        setUsername(account.username);
+                        setPassword(account.password);
+                        setError("");
+                      }}
+                      className="w-full flex items-center justify-between px-3 py-2 rounded-lg border border-line hover:border-line-strong hover:bg-sunken transition-colors text-left cursor-pointer"
                     >
-                      <span className="truncate">{account.label}</span>
-                      <span className="text-xs text-emerald-400/70 group-hover:text-emerald-400 font-mono shrink-0 ml-2">
+                      <span className="min-w-0">
+                        <span className="block text-sm text-ink truncate">{account.label}</span>
+                        <span className="block text-xs text-ink-muted">{account.role}</span>
+                      </span>
+                      <span className="text-xs font-mono text-ink-muted shrink-0 ml-2">
                         {account.username}
                       </span>
                     </button>
@@ -303,28 +267,21 @@ export default function LoginPage() {
           </div>
         )}
 
+        {/* ─── Alta de socio ─── */}
         {view === "register" && (
-          <div className="bg-slate-900/80 backdrop-blur-xl border border-slate-700/50 rounded-2xl p-8 shadow-2xl shadow-black/30">
-            <button
-              onClick={() => switchView("login")}
-              className="flex items-center gap-1.5 text-sm text-slate-400 hover:text-white transition-colors mb-4"
-            >
+          <div className="card p-6">
+            <button onClick={() => switchView("login")} className="btn-ghost btn-sm -ml-3 mb-4">
               <ArrowLeft className="w-4 h-4" />
-              Volver al login
+              Volver
             </button>
 
-            <div className="flex items-center gap-2 mb-6">
-              <UserPlus className="w-5 h-5 text-emerald-400" />
-              <h2 className="text-lg font-semibold text-white">Crear Cuenta</h2>
-            </div>
+            <h2 className="section-title mb-5">Crear cuenta</h2>
 
             <form onSubmit={handleRegister} className="space-y-4">
               {gymSelector}
 
               <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">
-                  Nombre completo
-                </label>
+                <label className="label">Nombre completo</label>
                 <input
                   type="text"
                   value={regName}
@@ -333,14 +290,12 @@ export default function LoginPage() {
                     setError("");
                   }}
                   placeholder="Ej: Juan Pérez"
-                  className={inputClass}
+                  className="input"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">
-                  Nombre de usuario
-                </label>
+                <label className="label">Nombre de usuario</label>
                 <input
                   type="text"
                   value={regUsername}
@@ -349,31 +304,20 @@ export default function LoginPage() {
                     setError("");
                   }}
                   placeholder="Ej: juanperez"
-                  className={inputClass}
+                  className="input"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">Contraseña</label>
-                <div className="relative">
-                  <input
-                    type={showRegPassword ? "text" : "password"}
-                    value={regPassword}
-                    onChange={(e) => {
-                      setRegPassword(e.target.value);
-                      setError("");
-                    }}
-                    placeholder="Mínimo 6 caracteres"
-                    className={`${inputClass} pr-12`}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowRegPassword(!showRegPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200 transition-colors"
-                  >
-                    {showRegPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                  </button>
-                </div>
+                <label className="label">Contraseña</label>
+                <PasswordInput
+                  value={regPassword}
+                  onChange={(e) => {
+                    setRegPassword(e.target.value);
+                    setError("");
+                  }}
+                  placeholder="Mínimo 6 caracteres"
+                />
               </div>
 
               <ErrorBanner message={error} />
@@ -381,45 +325,32 @@ export default function LoginPage() {
               <button
                 type="submit"
                 disabled={loading || !regName || !regUsername || !regPassword}
-                className={submitClass}
+                className="btn-primary w-full"
               >
-                {loading ? (
-                  <Spinner label="Creando cuenta…" />
-                ) : (
-                  <span className="flex items-center justify-center gap-2">
-                    <UserPlus className="w-5 h-5" />
-                    Crear Cuenta y Acceder
-                  </span>
-                )}
+                {loading && <Loader2 className="w-4 h-4 animate-spin" />}
+                {loading ? "Creando cuenta…" : "Crear cuenta y acceder"}
               </button>
             </form>
           </div>
         )}
 
+        {/* ─── Alta de gimnasio ─── */}
         {view === "gym" && (
-          <div className="bg-slate-900/80 backdrop-blur-xl border border-slate-700/50 rounded-2xl p-8 shadow-2xl shadow-black/30">
-            <button
-              onClick={() => switchView("login")}
-              className="flex items-center gap-1.5 text-sm text-slate-400 hover:text-white transition-colors mb-4"
-            >
+          <div className="card p-6">
+            <button onClick={() => switchView("login")} className="btn-ghost btn-sm -ml-3 mb-4">
               <ArrowLeft className="w-4 h-4" />
-              Volver al login
+              Volver
             </button>
 
-            <div className="flex items-center gap-2 mb-2">
-              <Building2 className="w-5 h-5 text-cyan-400" />
-              <h2 className="text-lg font-semibold text-white">Registrá tu gimnasio</h2>
-            </div>
-            <p className="text-slate-400 text-xs mb-6">
+            <h2 className="section-title">Registrá tu gimnasio</h2>
+            <p className="text-sm text-ink-soft mt-1.5 mb-5">
               Creás tu espacio propio con tus socios, tus rutinas y tus cuotas. Arrancás con los
               planes de 2, 3 y 5 días ya cargados.
             </p>
 
             <form onSubmit={handleGymRegister} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">
-                  Nombre del gimnasio
-                </label>
+                <label className="label">Nombre del gimnasio</label>
                 <input
                   type="text"
                   value={gymForm.gymName}
@@ -428,14 +359,12 @@ export default function LoginPage() {
                     setError("");
                   }}
                   placeholder="Ej: Olimpo Fitness"
-                  className={inputClass}
+                  className="input"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">
-                  Responsable
-                </label>
+                <label className="label">Responsable</label>
                 <input
                   type="text"
                   value={gymForm.ownerName}
@@ -444,14 +373,12 @@ export default function LoginPage() {
                     setError("");
                   }}
                   placeholder="Ej: Ana Gómez"
-                  className={inputClass}
+                  className="input"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">
-                  Usuario de administrador
-                </label>
+                <label className="label">Usuario de administrador</label>
                 <input
                   type="text"
                   value={gymForm.username}
@@ -463,92 +390,68 @@ export default function LoginPage() {
                     setError("");
                   }}
                   placeholder="Ej: anagomez"
-                  className={inputClass}
+                  className="input"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">Contraseña</label>
-                <div className="relative">
-                  <input
-                    type={showGymPassword ? "text" : "password"}
-                    value={gymForm.password}
-                    onChange={(e) => {
-                      setGymForm({ ...gymForm, password: e.target.value });
-                      setError("");
-                    }}
-                    placeholder="Mínimo 8 caracteres"
-                    className={`${inputClass} pr-12`}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowGymPassword(!showGymPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200 transition-colors"
-                  >
-                    {showGymPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                  </button>
-                </div>
+                <label className="label">Contraseña</label>
+                <PasswordInput
+                  value={gymForm.password}
+                  onChange={(e) => {
+                    setGymForm({ ...gymForm, password: e.target.value });
+                    setError("");
+                  }}
+                  placeholder="Mínimo 8 caracteres"
+                />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">
-                  WhatsApp de contacto
-                </label>
+                <label className="label">WhatsApp de contacto</label>
                 <input
                   type="text"
                   value={gymForm.whatsapp}
                   onChange={(e) => setGymForm({ ...gymForm, whatsapp: e.target.value })}
                   placeholder="Ej: 3329534029"
-                  className={inputClass}
+                  className="input"
                 />
+                <p className="hint">Tus socios lo usan para coordinar el pago de la cuota.</p>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-2">
-                    Cuota mensual
-                  </label>
+                  <label className="label">Cuota mensual</label>
                   <input
                     type="number"
                     min="0"
                     value={gymForm.monthlyPrice}
                     onChange={(e) => setGymForm({ ...gymForm, monthlyPrice: e.target.value })}
-                    className={inputClass}
+                    className="input"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-2">
-                    Plan Pro
-                  </label>
+                  <label className="label">Plan Pro</label>
                   <input
                     type="number"
                     min="0"
                     value={gymForm.proPrice}
                     onChange={(e) => setGymForm({ ...gymForm, proPrice: e.target.value })}
-                    className={inputClass}
+                    className="input"
                   />
                 </div>
               </div>
 
               <ErrorBanner message={error} />
 
-              <button type="submit" disabled={loading} className={submitClass}>
-                {loading ? (
-                  <Spinner label="Creando gimnasio…" />
-                ) : (
-                  <span className="flex items-center justify-center gap-2">
-                    <Building2 className="w-5 h-5" />
-                    Crear gimnasio
-                  </span>
-                )}
+              <button type="submit" disabled={loading} className="btn-primary w-full">
+                {loading && <Loader2 className="w-4 h-4 animate-spin" />}
+                {loading ? "Creando gimnasio…" : "Crear gimnasio"}
               </button>
             </form>
           </div>
         )}
 
-        <p className="text-center text-slate-600 text-xs mt-6">
-          © 2026 KineFix. Todos los derechos reservados.
-        </p>
+        <p className="text-center text-ink-muted text-xs mt-6">© 2026 KineFix</p>
       </div>
     </div>
   );
