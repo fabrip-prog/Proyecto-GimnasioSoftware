@@ -41,6 +41,18 @@ function prune() {
   }
 }
 
+/** Antigüedad del respaldo más reciente, en milisegundos. */
+function lastBackupAge() {
+  if (!fs.existsSync(BACKUP_DIR)) return Infinity;
+
+  const times = fs
+    .readdirSync(BACKUP_DIR)
+    .filter((f) => f.startsWith("kinefix-") && f.endsWith(".db"))
+    .map((f) => fs.statSync(path.join(BACKUP_DIR, f)).mtimeMs);
+
+  return times.length === 0 ? Infinity : Date.now() - Math.max(...times);
+}
+
 export function scheduleBackups() {
   if (process.env.BACKUP_DISABLED === "1") {
     console.log("Respaldos automáticos desactivados (BACKUP_DISABLED=1).");
@@ -51,7 +63,15 @@ export function scheduleBackups() {
     console.log(`Respaldo creado: ${target} (se conservan los últimos ${KEEP}).`);
   const complain = (err) => console.error("No se pudo crear el respaldo:", err.message);
 
-  runBackup().then(announce).catch(complain);
+  // En desarrollo `node --watch` reinicia el proceso a cada cambio de archivo.
+  // Sin esta guarda, cada reinicio dejaría un respaldo y en una tarde de trabajo
+  // los buenos quedarían desplazados por decenas de copias idénticas.
+  const minGapMs = Math.min(INTERVAL_HOURS, 1) * 60 * 60 * 1000;
+  if (lastBackupAge() < minGapMs) {
+    console.log("Ya hay un respaldo reciente; el próximo va según el intervalo.");
+  } else {
+    runBackup().then(announce).catch(complain);
+  }
 
   const timer = setInterval(
     () => runBackup().then(announce).catch(complain),
